@@ -54,6 +54,7 @@ Test-Suite test-yab
     ,QuickCheck
     ,yab
     ,containers
+    ,time
 
 library
   -- Modules exported by the library.

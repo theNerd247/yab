@@ -16,9 +16,6 @@ module YabCommon
   ,module Data.Scientific
   ,module Data.Typeable
   ,module GHC.Generics
-  ,Name
-  ,Rate
-  ,Amount
 )
 where
 
@@ -28,8 +25,4 @@ import Data.Scientific
 import Data.Typeable
 import GHC.Generics
 
-type Name = String
 
-type Rate = Integer
-
-type Amount = Double

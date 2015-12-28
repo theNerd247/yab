@@ -32,13 +32,10 @@ data Entry = Entry
     -- | The description of the entry
     ,entryDesc   :: String
     -- | The amount of the entry 
-    ,entryAmount :: Amount
+    ,entryAmount :: Double
   }
-  deriving (Generic,Typeable,Show,Read)
+  deriving (Generic,Typeable,Show,Read,Eq)
 
 type Entries = [Entry]
-
--- | Each account is a binding to a list of entries and a name
-type Account = DML.Map Name Entries
 
 filterEntries = DL.filter

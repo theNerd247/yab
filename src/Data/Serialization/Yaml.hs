@@ -25,13 +25,6 @@ import Data.Serialization.Errors
 import qualified Data.Yaml as YAML
 import qualified Data.Aeson.Types as DAT
 
--- | TODO: add a way to support percentages of the income in the yaml files
-instance YAML.FromJSON Budget
-
--- TODO: fix this quick hack as per issue #290 on github.com/bos/aeson
-instance YAML.ToJSON Budget where
-  toJSON = DAT.genericToJSON DAT.defaultOptions
-
 data BadYAMLReadException = BadYAMLReadException FilePath 
   deriving (Generic,Typeable,Read,Eq,Ord)
 
@@ -51,3 +44,18 @@ readYamlFile fpath = do
 -- | write data to a yaml file. If an error occurs then the system exits
 writeYamlFile :: (YAML.ToJSON a, MonadIO m, MonadCatch m) => FilePath -> a -> m ()
 writeYamlFile f = handleAll printEAndExit . liftIO . YAML.encodeFile f
+
+-- | TODO: add a way to support percentages of the income in the yaml files
+instance YAML.FromJSON Budget
+
+-- TODO: fix this quick hack as per issue #290 on github.com/bos/aeson
+instance YAML.ToJSON Budget where
+  toJSON = DAT.genericToJSON DAT.defaultOptions
+
+instance YAML.ToJSON Account where
+  toJSON = YAML.toJSON . accountAmount
+
+instance YAML.FromJSON Account where
+  parseJSON v = do
+    a <- YAML.parseJSON v
+    return $ Account {accountAmount = a, accountEntries = []}
