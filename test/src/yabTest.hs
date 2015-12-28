@@ -23,5 +23,6 @@ checkFailure _ = exitFailure
 runCheck p = checkFailure =<< verboseCheckResult p
 
 main = do
-  runCheck $ (prop_yamlIO testBudgetFilePath :: BudgetAccount -> Property)
-  runCheck $ (prop_yamlIO testBudgetFilePath :: Budget -> Property)
+  {-runCheck $ (prop_yamlIO testBudgetFilePath :: Entry -> Property)-}
+  runCheck $ (prop_yamlIO testBudgetFilePath :: Account -> Property)
+  {-runCheck $ (prop_yamlIO testBudgetFilePath :: Budget -> Property)-}

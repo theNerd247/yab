@@ -21,24 +21,37 @@ import Data.Budget
 import Test.LoremWords
 
 import qualified Data.Map as DM
+import qualified Data.Time as DT
 
-instance Arbitrary BudgetAccount where
+posNum :: (Num a, Ord a, Arbitrary a) => Gen a
+posNum = getPositive <$> arbitrary
+
+instance Arbitrary Name where
+  arbitrary = loremWord
+
+instance Arbitrary DT.Day where
+  arbitrary = DT.fromGregorian 
+    <$> choose (2015,2018)
+    <*> choose (1,12)
+    <*> choose (1,31)
+
+instance Arbitrary Entry where
+  arbitrary = Entry <$> arbitrary <*> loremWord <*> arbitrary
+
+instance Arbitrary Account where
+  arbitrary = Account 
+    <$> posNum
+    <*> (listOf arbitrary)
+
+instance Arbitrary (DM.Map Name Account) where
   arbitrary = do 
-    fmap DM.fromList $ listOf1 genItem
+    DM.fromList <$> (listOf1 genItem)
     where
-      genItem = do
-        n <- loremWord
-        (Positive a) <- arbitrary
-        return (n,a)
+      genItem = ((,)) <$> loremWord <*> arbitrary
 
 instance Arbitrary Budget where
-  arbitrary = do
-    (Positive i) <- arbitrary
-    (Positive r) <- arbitrary
-    ba <- arbitrary
-    return $ Budget 
-      {
-       budgetIncome = i
-      ,budgetRate = r
-      ,budgetAccounts = ba 
-      }
+  arbitrary = Budget 
+    <$> arbitrary
+    <*> posNum
+    <*> posNum
+
