@@ -11,14 +11,21 @@ Portability : POSIX
 
 module Data.Serialization.Csv
 (
+  saveCSVFile
+  ,loadCSVFile
+  ,CSVParseException(..)
 )
 where
 
+
+import YabCommon
+import Data.Budget
+
 import qualified Data.Csv as CSV
 import qualified Data.Time as DT
-import Data.ByteString.Lazy.Char8 (unpack,pack)
 
-import Data.Budget
+import qualified GHC.Exts as GE (toList)
+import Data.ByteString.Lazy.Char8 (unpack,pack)
 
 instance CSV.ToField DT.Day where
   toField = CSV.toField . DT.formatTime DT.defaultTimeLocale "%D"
@@ -27,14 +34,8 @@ instance CSV.FromField DT.Day where
   parseField f = (CSV.parseField f :: CSV.Parser String)
     >>= DT.parseTimeM True DT.defaultTimeLocale "%D" 
 
-instance CSV.ToField Entry
-instance CSV.FromField Entry
-
-instance CSV.FromRecord Account where
-  parseRecord = fmap (Account 0) . CSV.parseRecord
-
-instance CSV.ToRecord Account where
-  toRecord = CSV.toRecord . accountEntries
+instance CSV.ToRecord Entry
+instance CSV.FromRecord Entry
 
 -- | A parsing exception that contains the origin parser error
 data CSVParseException = CSVParseException String deriving (Show,Typeable)
@@ -42,23 +43,23 @@ data CSVParseException = CSVParseException String deriving (Show,Typeable)
 instance Exception CSVParseException
 
 -- | Our custom CSV options 
-csvEncodeOptions = defaultEncodeOptions 
+csvEncodeOptions = CSV.defaultEncodeOptions 
   {
   -- | don't quote anything....
-  encQuoting = QuoteNone
+  CSV.encQuoting = CSV.QuoteNone
   }
 
 -- | saves a csv compatable type to a file
-saveCSVFile :: (MonadIO m, ToRecord a) => FilePath -> [a] -> m ()
-saveCSVFile f = liftIO . writeFile f . unpack . encodeWith csvEncodeOptions
+saveCSVFile :: (MonadIO m, CSV.ToRecord a) => FilePath -> [a] -> m ()
+saveCSVFile f = liftIO . writeFile f . unpack . CSV.encodeWith csvEncodeOptions
 
 -- | loads a headerless csv file
-loadCSVFile :: (MonadThrow m, MonadIO m, FromRecord a) => FilePath -> m [a]
+loadCSVFile :: (MonadThrow m, MonadIO m, CSV.FromRecord a) => FilePath -> m [a]
 loadCSVFile f = do 
   bs <- liftIO $ readFile f
-  either mkerror mklist . decode NoHeader . pack $ bs
+  either mkerror mklist . CSV.decode CSV.NoHeader . pack $ bs
     where 
     -- | convert the result from a Vector to a []
-    mklist = return . toList
+    mklist = return . GE.toList
     -- | or convert to a SomeException
     mkerror = throwM . CSVParseException

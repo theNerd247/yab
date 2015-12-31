@@ -60,12 +60,13 @@ library
   -- Modules exported by the library.
   exposed-modules:     
     Data.Budget
-    Data.Budget.Budget
-    Data.Budget.Entry
-    Data.Serialization
-    Data.Serialization.Yaml
-    Data.Serialization.Errors
-    Data.Serialization.Csv
+    ,Data.Budget.Budget
+    ,Data.Budget.Entry
+    ,Data.Serialization
+    ,Data.Serialization.Yaml
+    ,Data.Serialization.Errors
+    ,Data.Serialization.Csv
+    ,YabCommon
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -86,6 +87,7 @@ library
                      ,bytestring
                      ,scientific
                      ,aeson
+                     ,directory
 
   -- Directories containing source files.
   hs-source-dirs:      src

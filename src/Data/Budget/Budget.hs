@@ -18,6 +18,7 @@ module Data.Budget.Budget
   ,Amount(..)
   ,Rate(..)
   ,Account(..)
+  ,mergeAccounts
 )
 where
 
