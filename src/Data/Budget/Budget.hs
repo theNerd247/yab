@@ -24,6 +24,7 @@ where
 
 import YabCommon
 import qualified Data.Map as DM
+import qualified Data.List as DL
 import Data.Budget.Entry
 
 type Name = String
@@ -51,11 +52,12 @@ data Budget = Budget
   deriving (Generic,Typeable,Show,Read,Eq)
 
 -- | Merges two accounts. This is usefull for merging the data for accounts that
--- was parsed from a CSV and YAML files
+-- was parsed from a CSV and YAML files. The accountAmount value is taken from
+-- the first account given. The entries are combined with a union.
 mergeAccounts a b = Account 
   {
    accountAmount = accountAmount a
-  ,accountEntries = (accountEntries a) ++ (accountEntries b)
+  ,accountEntries = DL.union (accountEntries a) (accountEntries b)
   }
 
 -- | Checks if a budget is balanced (its income is equal to its spending)

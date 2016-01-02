@@ -74,7 +74,7 @@ instance Serialize Budget where
     -- merge the Account data
     return $ b 
       {
-        budgetAccounts = DM.unionWith mergeAccounts (DM.fromList cas) (budgetAccounts b)
+        budgetAccounts = DM.unionWith mergeAccounts (budgetAccounts b) (DM.fromList cas) 
       }
 
 makeAccountPath basePath name = basePath </> "accounts" </> name <.> "csv"
