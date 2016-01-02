@@ -54,4 +54,3 @@ instance Arbitrary Budget where
     <$> arbitrary
     <*> posNum
     <*> posNum
-

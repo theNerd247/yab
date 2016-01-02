@@ -9,12 +9,18 @@ import Data.Budget
 import Data.Serialization
 import System.Exit
 
-testBudgetFilePath = "/tmp/tstBudget.yaml"
+import qualified HsShellScript as HShell
+import System.FilePath.Posix ((</>))
 
-prop_yamlIO fp d = monadicIO $ do 
-  run $ writeYamlFile fp d
-  r <- run $ readYamlFile fp
+
+import YabCommon
+
+prop_Serialize fp d = monadicIO $ do 
+  run $ serialize fp d
+  r <- run $ deserialize fp
   assert $ r == d
+
+mktempDir = liftIO $ HShell.tmp_dir "/tmp/"
 
 checkFailure :: Result -> IO a
 checkFailure (Success _ _ o) = putStrLn o >> exitSuccess
@@ -23,6 +29,7 @@ checkFailure _ = exitFailure
 runCheck p = checkFailure =<< verboseCheckResult p
 
 main = do
-  {-runCheck $ (prop_yamlIO testBudgetFilePath :: Entry -> Property)-}
-  runCheck $ (prop_yamlIO testBudgetFilePath :: Account -> Property)
-  {-runCheck $ (prop_yamlIO testBudgetFilePath :: Budget -> Property)-}
+  tstDir <- mktempDir
+  HShell.mkdir $ tstDir </> "accounts"
+  putStrLn $ "Test data at: " ++ tstDir
+  runCheck $ (prop_Serialize tstDir :: Budget -> Property)

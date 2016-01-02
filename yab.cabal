@@ -55,6 +55,8 @@ Test-Suite test-yab
     ,yab
     ,containers
     ,time
+    ,hsshellscript
+    ,filepath
 
 library
   -- Modules exported by the library.
