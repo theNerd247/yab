@@ -64,11 +64,13 @@ library
     Data.Budget
     ,Data.Budget.Budget
     ,Data.Budget.Entry
+    ,Data.Budget.Day
     ,Data.Serialization
     ,Data.Serialization.Yaml
     ,Data.Serialization.Errors
     ,Data.Serialization.Csv
     ,YabCommon
+    ,Cli.Main
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -90,6 +92,7 @@ library
                      ,scientific
                      ,aeson
                      ,directory
+                     ,optparse-applicative
 
   -- Directories containing source files.
   hs-source-dirs:      src

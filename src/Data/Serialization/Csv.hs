@@ -22,17 +22,16 @@ import YabCommon
 import Data.Budget
 
 import qualified Data.Csv as CSV
-import qualified Data.Time as DT
 
 import qualified GHC.Exts as GE (toList)
 import Data.ByteString.Lazy.Char8 (unpack,pack)
 
-instance CSV.ToField DT.Day where
-  toField = CSV.toField . DT.formatTime DT.defaultTimeLocale "%D"
+instance CSV.ToField Day where
+  toField = CSV.toField . show . getDay
 
-instance CSV.FromField DT.Day where
+instance CSV.FromField Day where
   parseField f = (CSV.parseField f :: CSV.Parser String)
-    >>= DT.parseTimeM True DT.defaultTimeLocale "%D" 
+    >>= return . Day . read 
 
 instance CSV.ToRecord Entry
 instance CSV.FromRecord Entry

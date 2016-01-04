@@ -20,15 +20,16 @@ module Data.Budget.Entry
 where
 
 import YabCommon
+import Data.Budget.Day
+
 import qualified Data.List as DL
-import qualified Data.Time as DT
 import qualified Data.Map.Lazy as DML
 
 -- | A single entry in an account file
 data Entry = Entry
   {
     -- | The date of the entry
-    entryDate   :: DT.Day
+    entryDate   :: Day
     -- | The description of the entry
     ,entryDesc   :: String
     -- | The amount of the entry 

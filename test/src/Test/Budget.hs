@@ -29,8 +29,8 @@ posNum = getPositive <$> arbitrary
 instance Arbitrary Name where
   arbitrary = loremWord
 
-instance Arbitrary DT.Day where
-  arbitrary = DT.fromGregorian 
+instance Arbitrary Day where
+  arbitrary = fmap Day $ DT.fromGregorian 
     <$> choose (2015,2018)
     <*> choose (1,12)
     <*> choose (1,31)
