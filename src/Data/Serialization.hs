@@ -15,6 +15,7 @@ module Data.Serialization
 (
   module Data.Serialization.Yaml
   ,module Data.Serialization.Csv
+  ,module Data.Serialization.Errors
   ,Serialize(..)
 )
 where
@@ -23,6 +24,7 @@ import YabCommon
 import Data.Budget
 import Data.Serialization.Yaml
 import Data.Serialization.Csv
+import Data.Serialization.Errors
 
 import qualified Data.Map.Lazy as DM
 import qualified System.FilePath.Posix as SFP
@@ -62,20 +64,21 @@ instance Serialize (DM.Map Name Account) where
 instance Serialize Budget where
   serialize fpath b = do
     -- save the budget yaml file
-    writeYamlFile (fpath </> "budget.yaml") b
+    writeYamlFile fpath b
     -- save the entries for each account
-    serialize fpath (budgetAccounts b)
+    serialize (getBudgetDirPath fpath) (budgetAccounts b)
 
   deserialize fpath = do
     -- serialize in from the budget config file
-    b <- readYamlFile (fpath </> "budget.yaml")
+    b <- readYamlFile fpath
     -- serialize in the entry files (only those mentioned in the budget file)
-    cas <- sequence $ deserializeAccount fpath <$> DM.keys (budgetAccounts b)
+    cas <- sequence $ deserializeAccount (getBudgetDirPath fpath) <$> DM.keys (budgetAccounts b)
     -- merge the Account data
     return $ b 
       {
-        budgetAccounts = DM.unionWith mergeAccounts (budgetAccounts b) (DM.fromList cas) 
+        budgetAccounts = DM.unionWith mergeAccountData (budgetAccounts b) (DM.fromList cas) 
       }
 
+getBudgetDirPath = SFP.takeDirectory
 makeAccountPath basePath name = basePath </> "accounts" </> name <.> "csv"
 deserializeAccount bp n = deserialize (makeAccountPath bp n) >>= return . ((n,))

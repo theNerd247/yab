@@ -32,4 +32,4 @@ main = do
   tstDir <- mktempDir
   HShell.mkdir $ tstDir </> "accounts"
   putStrLn $ "Test data at: " ++ tstDir
-  runCheck $ (prop_Serialize tstDir :: Budget -> Property)
+  runCheck $ (prop_Serialize (tstDir </> "budget.yaml") :: Budget -> Property)

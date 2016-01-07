@@ -44,7 +44,7 @@ instance Exception CSVParseException
 -- | Our custom CSV options 
 csvEncodeOptions = CSV.defaultEncodeOptions 
   {
-  -- | don't quote anything....
+  -- dont quote anything
   CSV.encQuoting = CSV.QuoteNone
   }
 

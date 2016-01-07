@@ -25,3 +25,5 @@ cabal.sandbox.config
 Session.vim
 .netrwhist
 *~
+
+test/data

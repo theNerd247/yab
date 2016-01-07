@@ -1,9 +1,9 @@
 {-|
-Module      : Cli.Main
-Description : Cli main interface module
+Module      : Name
+Description : modules for running the cli interfaces
 Copyright   : 
 License     : GPL-2
-Maintainer  : 
+Maintainer  : theNerd247
 Stability   : experimental
 Portability : POSIX
 
@@ -11,115 +11,96 @@ Portability : POSIX
 
 module Cli.Main
 (
+  runProg
 )
 where
 
 import YabCommon
 import Data.Budget
-import Control.Applicative
+import Data.Serialization
+import Cli.Types
+import Cli.Parser
 
-import qualified Options.Applicative as OA
+import qualified System.Directory as SD
+import qualified System.FilePath.Posix as SFP
+import qualified Data.Map as DM
+import qualified Control.Monad.Trans.State.Lazy as CMS
 
-import Options.Applicative ((<>),idm)
+import System.FilePath.Posix ((</>))
 
-data MainProg = MainProg
+getBudgetFilePath :: MainOpts -> FilePath
+getBudgetFilePath = (</> "budget.yaml") . budgetFileDir
+
+runProg :: IO ()
+runProg = getProgOpts >>= mainProg
+
+data CliState = CliState
   {
-    mainOpts :: MainOpts
-    ,prog    :: Prog
+    budget :: Budget
+  , mOpts :: MainOpts
+  , budgetFilePath :: FilePath
   }
 
-data MainOpts = MainOpts 
-  {
-   budgetFile :: FilePath
-  }
+type CliM = CMS.StateT CliState IO
 
-data Prog = 
-    AccountProg AccountCommand
-  | BudgetProg BudgetCommand
+mainProg ops = do
+  b <- deserialize bfp
+  CMS.evalStateT (runCmd (prog ops)) (initState b)
+  where
+    mo = mainOpts ops
+    bfp = getBudgetFilePath mo
+    initState b = CliState 
+      {
+        budget = b
+      , mOpts  = mo
+      , budgetFilePath = bfp
+      }
 
-data AccountCommand = 
-    AddAccount AddAccountOpts
-  | RemoveAccount RemoveAccountOpts
-  | MergeAccounts MergeAccountsOpts
+class Command a where
+  runCmd :: a -> CliM ()
 
-data BudgetCommand = 
-    BudgetStatus
-  | NewPayCheck NewPaycheckOpts
+instance Command Prog where
+  runCmd (AccountProg cmd) = runCmd cmd
+  runCmd (BudgetProg cmd) = runCmd cmd
 
-type AccountNameOpt = Name
+instance Command AccountCommand where
+  runCmd (AddAccount ops) = do 
+    runAccountCmd $ return . addAccount n (value ops)
+    printOut $ "Added account: " ++ n
+      where
+        n = name ops
+    
+  runCmd (RemoveAccount ops) = do 
+    runAccountCmd $ removeAccount ops
+    printOut $ "Removed Account: " ++ ops
 
-type AddAccountOpts = AccountNameOpt 
+  runCmd (MergeAccounts ops) = do 
+    runAccountCmd $ mergeAccounts accA accB
+    printOut $ "Merged Accounts: " ++ accA ++ " " ++ accB
+      where
+        accA = accountA ops
+        accB = accountB ops
 
-type RemoveAccountOpts = AccountNameOpt
+instance Command BudgetCommand where
+  runCmd BudgetStatus = runWithBudget $ \b -> checkBudgetBalanced b >> checkAccounts b
+  runCmd (NewPayCheck ops) = undefined
 
-data MergeAccountsOpts = MergeAccountsOpts 
-  {
-   accountA :: AccountNameOpt
-  ,accountB :: AccountNameOpt
-  }
+runWithBudget :: (Budget -> CliM a) -> CliM a
+runWithBudget f = CMS.gets budget >>= f
 
-data NewPaycheckOpts = NewPaycheckOpts
-  {
-    amount :: Maybe Amount
-    ,date  :: Maybe Day
-  }
+saveBudget :: CliM ()
+saveBudget = do
+    b <- CMS.gets budget
+    bfp <- CMS.gets budgetFilePath
+    serialize bfp b
 
-mainParser :: OA.Parser MainProg
-mainParser = MainProg 
-  <$> pMainOpts
-  <*> pProgs
+modifyAccounts :: BudgetAccounts -> CliState -> CliState
+modifyAccounts a s@(CliState{budget = b}) = s {budget = b {budgetAccounts = a}}
 
-pMainOpts :: OA.Parser MainOpts
-pMainOpts = MainOpts <$> pBudgetFile
+runAccountCmd f =
+  runWithBudget (f . budgetAccounts)
+  >>= CMS.modify . modifyAccounts
+  >> saveBudget
+  `catchAll` printEAndExit
 
-pProgs :: OA.Parser Prog
-pProgs = OA.subparser $
-     pAccountProg 
-  <> pBudgetProg
-
-pBudgetFile = OA.strOption $ 
-     OA.value "budget.yaml"
-  <> OA.short 'b'
-  <> OA.long "budget"
-  <> OA.help "The budget config file to use"
-  <> OA.metavar "BUDGETFILE"
-
-cmd' n h ops = OA.command n $ OA.info ops (OA.progDesc h)
-commandGroup p n h cmds = cmd' n h (p <$> (OA.subparser $ mconcat cmds))
-
-pBudgetProg = commandGroup BudgetProg "budget" "General budget commands" 
-  [
-    pBudgetStatus
-    ,pNewPaycheck
-  ]
-
-pAccountProg = commandGroup AccountProg "account" "General account commands"
-  [
-     pAddAccount
-    ,pRemoveAccount
-    ,pMergeAccounts
-  ]
-
-pBudgetStatus = cmd' "status" "get the overal status of the budget" (pure BudgetStatus)
-
-pNewPaycheck :: OA.Mod OA.CommandFields BudgetCommand
-pNewPaycheck = cmd' "newpay" "adds a new paycheck to the accounts based on the given budget" $ 
-  NewPayCheck <$> (NewPaycheckOpts <$> optional pAmount <*> optional pDay)
-
-pAddAccount = cmd' "add" "add a new account" $ 
-  AddAccount <$> pAccountNameOpt 
-
-pRemoveAccount = cmd' "rm" "remove an account" $
-  RemoveAccount <$> pAccountNameOpt 
-
-pMergeAccounts = cmd' "merge" "merges two accounts" $ 
-  MergeAccounts <$> (MergeAccountsOpts <$> pAccountNameOpt <*> pAccountNameOpt)
-
-pAmount :: OA.Parser Amount
-pAmount = OA.argument OA.auto $ OA.help "A dollar amount as a floating point number"
-
-pDay :: OA.Parser Day
-pDay = OA.argument OA.auto $ OA.help "A day in the format mm/dd/yy"
-
-pAccountNameOpt :: OA.Parser Name
-pAccountNameOpt = OA.strArgument $ OA.help "the name of an account defined in the budget file."
+printOut = liftIO . putStrLn

@@ -71,6 +71,8 @@ library
     ,Data.Serialization.Csv
     ,YabCommon
     ,Cli.Main
+    ,Cli.Parser
+    ,Cli.Types
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -99,3 +101,22 @@ library
 
   -- Base language which the package is written in.
   default-language:    Haskell2010
+
+executable yab
+  main-is: main.hs
+  hs-source-dirs: src
+  build-depends:      base >=4.8 && <4.9
+                     ,yab
+                     ,yaml
+                     ,exceptions
+                     ,filepath
+                     ,transformers
+                     ,containers
+                     ,time
+                     ,cassava
+                     ,vector
+                     ,bytestring
+                     ,scientific
+                     ,aeson
+                     ,directory
+                     ,optparse-applicative
