@@ -1,5 +1,6 @@
 {-#LANGUAGE DeriveGeneric #-}
 {-#LANGUAGE DeriveDataTypeable #-}
+
 {-|
 Module      : Name
 Description : Budget datatype definitions
@@ -25,6 +26,7 @@ module Data.Budget.Budget
   ,addAccount
   ,removeAccount
   ,mergeAccounts
+  ,showAmount
 )
 where
 
@@ -76,9 +78,14 @@ checkAccount :: (MonadIO m) => Name -> Account -> m ()
 checkAccount accName (Account {accountEntries = es, accountAmount = i}) = 
   let bal = Prelude.foldr ((+) . entryAmount) 0 es
   in case bal >= 0 of
-    True -> liftIO . putStrLn $ "Account: " ++ accName ++ " is ok!"
+    True -> liftIO . putStrLn $ "Account: " ++ accName ++ " is ok! " ++ (showAmount bal)
     False -> liftIO . putStrLn $ "Account: " ++ accName ++ "is off! Min payoff: " 
       ++ (show $ findMinPayOff bal i)
+
+showAmount amnt = ("$"++) $ maybe s (flip take s . (+3)) $ i
+  where 
+    s = show amnt
+    i = DL.elemIndex '.' s
 
 -- | Merges two accounts. This is usefull for merging the data for accounts that
 -- was parsed from a CSV and YAML files. The accountAmount value is taken from
