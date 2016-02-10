@@ -65,25 +65,31 @@ instance Command Prog where
 
 instance Command AccountCommand where
   runCmd (AddAccount ops) = do 
-    runAccountCmd $ return . addAccount n (value ops)
+    runAccountCmd $ (saveAccounts =<<) . return . addAccount n (value ops)
     printOut $ "Added account: " ++ n
       where
         n = name ops
     
   runCmd (RemoveAccount ops) = do 
-    runAccountCmd $ removeAccount ops
+    runAccountCmd $ (saveAccounts =<<) . removeAccount ops
     printOut $ "Removed Account: " ++ ops
 
   runCmd (MergeAccounts ops) = do 
-    runAccountCmd $ mergeAccounts accA accB
+    runAccountCmd $ (saveAccounts =<<) . mergeAccounts accA accB
     printOut $ "Merged Accounts: " ++ accA ++ " " ++ accB
       where
         accA = accountA ops
         accB = accountB ops
 
+  runCmd (AccountStatus ops) = 
+       runAccountCmd $ (checkAccount ops =<<) . getAccount ops
+
 instance Command BudgetCommand where
   runCmd BudgetStatus = runWithBudget $ \b -> checkBudgetBalanced b >> checkAccounts b
   runCmd (NewPayCheck ops) = undefined
+
+getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account
+getAccount name =  maybe (throwM $ NoSuchAccount name) return . DM.lookup name
 
 runWithBudget :: (Budget -> CliM a) -> CliM a
 runWithBudget f = CMS.gets budget >>= f
@@ -97,10 +103,12 @@ saveBudget = do
 modifyAccounts :: BudgetAccounts -> CliState -> CliState
 modifyAccounts a s@(CliState{budget = b}) = s {budget = b {budgetAccounts = a}}
 
+runAccountCmd :: (BudgetAccounts -> CliM a) -> CliM a
 runAccountCmd f =
   runWithBudget (f . budgetAccounts)
-  >>= CMS.modify . modifyAccounts
-  >> saveBudget
   `catchAll` printEAndExit
+
+saveAccounts :: BudgetAccounts -> CliM ()
+saveAccounts accs = CMS.modify (modifyAccounts accs) >> saveBudget
 
 printOut = liftIO . putStrLn

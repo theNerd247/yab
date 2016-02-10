@@ -61,6 +61,7 @@ data AccountCommand =
     AddAccount AddAccountOpts
   | RemoveAccount Name
   | MergeAccounts MergeAccountsOpts
+  | AccountStatus Name
 
 data AddAccountOpts = AddAccountOpts
   {

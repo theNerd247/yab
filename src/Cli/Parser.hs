@@ -87,6 +87,7 @@ instance CommandGroup AccountCommand where
       cmd' "add" "add a new account" $ AddAccount <$> parse
      ,cmd' "rm" "remove an account" $ RemoveAccount <$> parse 
      ,cmd' "merge" "merges two accounts" $ MergeAccounts <$> parse
+     ,cmd' "status" "the status of an account" $ AccountStatus <$> parse
     ]
 
 instance Parseable AddAccountOpts where
