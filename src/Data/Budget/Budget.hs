@@ -20,9 +20,11 @@ module Data.Budget.Budget
   ,Rate(..)
   ,Account(..)
   ,BudgetAccounts(..)
+  ,NoSuchAccount(..)
   ,mergeAccountData
   ,checkBudgetBalanced
   ,checkAccounts
+  ,checkAccount
   ,addAccount
   ,removeAccount
   ,mergeAccounts
@@ -60,6 +62,13 @@ data Budget = Budget
   }
   deriving (Generic,Typeable,Show,Read,Eq)
 
+data NoSuchAccount = NoSuchAccount Name deriving (Generic,Eq,Ord,Typeable)
+
+instance Show NoSuchAccount where
+  show (NoSuchAccount n) = "Account doesn't exist: " ++ n
+
+instance Exception NoSuchAccount
+
 -- | Checks if a budget is balanced (its income is equal to its spending)
 checkBudgetBalanced :: (MonadIO m) => Budget -> m ()
 checkBudgetBalanced (Budget {budgetAccounts = as, budgetIncome = i}) = 
@@ -80,7 +89,7 @@ checkAccount accName (Account {accountEntries = es, accountAmount = i}) =
   in case bal >= 0 of
     True -> liftIO . putStrLn $ "Account: " ++ accName ++ " is ok! " ++ (showAmount bal)
     False -> liftIO . putStrLn $ "Account: " ++ accName ++ "is off! Min payoff: " 
-      ++ (show $ findMinPayOff bal i)
+      ++ (showAmount $ findMinPayOff bal i)
 
 showAmount amnt = ("$"++) $ maybe s (flip take s . (+3)) $ i
   where 
@@ -95,13 +104,6 @@ mergeAccountData a b = Account
    accountAmount = accountAmount a + accountAmount b
   ,accountEntries = DL.union (accountEntries a) (accountEntries b)
   }
-
-data NoSuchAccount = NoSuchAccount Name deriving (Generic,Eq,Ord,Typeable)
-
-instance Show NoSuchAccount where
-  show (NoSuchAccount n) = "Account doesn't exist: " ++ n
-
-instance Exception NoSuchAccount
 
 addAccount :: Name -> Amount -> BudgetAccounts -> BudgetAccounts
 addAccount n a = DM.insert n (Account a [])
