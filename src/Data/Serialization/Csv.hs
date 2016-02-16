@@ -72,4 +72,4 @@ loadCSVFile f = do
     mklist = return . GE.toList
     -- | or convert to a SomeException
     mkerror s = throwM . CSVParseException $
-      "Parser error in file: " ++ f ++ " \n" ++ s
+      "Parser error in file: " ++ f ++ "\n" ++ " on line containing: " ++ (lines s !! 1)

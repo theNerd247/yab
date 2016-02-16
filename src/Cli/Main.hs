@@ -87,10 +87,7 @@ instance Command AccountCommand where
        runAccountCmd $ (checkAccount ops =<<) . getAccount ops
 
 instance Command BudgetCommand where
-  runCmd BudgetStatus = do
-    runWithBudget $ \b -> checkBudgetBalanced b >> checkAccounts b
-    `catchAll`
-    printEAndExit
+  runCmd BudgetStatus = runWithBudget $ \b -> checkBudgetBalanced b >> checkAccounts b
   runCmd (NewPayCheck ops) = undefined
 
 getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account
@@ -111,7 +108,6 @@ modifyAccounts a s@(CliState{budget = b}) = s {budget = b {budgetAccounts = a}}
 runAccountCmd :: (BudgetAccounts -> CliM a) -> CliM a
 runAccountCmd f =
   runWithBudget (f . budgetAccounts)
-  `catchAll` printEAndExit
 
 saveAccounts :: BudgetAccounts -> CliM ()
 saveAccounts accs = CMS.modify (modifyAccounts accs) >> saveBudget
