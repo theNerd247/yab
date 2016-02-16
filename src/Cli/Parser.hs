@@ -48,7 +48,7 @@ instance Parseable MainOpts where
   parse = MainOpts <$> pBudgetFile
 
 pBudgetFile = OA.strOption $ 
-     OA.value "budget.yaml"
+     OA.value "."
   <> OA.short 'b'
   <> OA.long "budget"
   <> OA.help "The budget config file to use"

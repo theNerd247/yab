@@ -46,6 +46,8 @@ type CliM = CMS.StateT CliState IO
 mainProg ops = do
   b <- deserialize bfp
   CMS.evalStateT (runCmd (prog ops)) (initState b)
+  `catchAll`
+  printEAndExit
   where
     mo = mainOpts ops
     bfp = getBudgetFilePath mo
@@ -85,7 +87,10 @@ instance Command AccountCommand where
        runAccountCmd $ (checkAccount ops =<<) . getAccount ops
 
 instance Command BudgetCommand where
-  runCmd BudgetStatus = runWithBudget $ \b -> checkBudgetBalanced b >> checkAccounts b
+  runCmd BudgetStatus = do
+    runWithBudget $ \b -> checkBudgetBalanced b >> checkAccounts b
+    `catchAll`
+    printEAndExit
   runCmd (NewPayCheck ops) = undefined
 
 getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account

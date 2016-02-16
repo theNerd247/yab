@@ -14,6 +14,7 @@ module Data.Serialization.Csv
   saveCSVFile
   ,loadCSVFile
   ,CSVParseException(..)
+  ,parseDate
 )
 where
 
@@ -21,25 +22,34 @@ where
 import YabCommon
 import Data.Budget
 
+import qualified Control.Monad as CM
 import qualified Data.Csv as CSV
-
 import qualified GHC.Exts as GE (toList)
+
 import Data.ByteString.Lazy.Char8 (unpack,pack)
-
-instance CSV.ToField Day where
-  toField = CSV.toField . show . getDay
-
-instance CSV.FromField Day where
-  parseField f = (CSV.parseField f :: CSV.Parser String)
-    >>= return . Day . read 
-
-instance CSV.ToRecord Entry
-instance CSV.FromRecord Entry
+import Data.Char (isSpace)
 
 -- | A parsing exception that contains the origin parser error
 data CSVParseException = CSVParseException String deriving (Show,Typeable)
 
-instance Exception CSVParseException
+instance Exception CSVParseException where
+  displayException (CSVParseException s) = s
+
+instance CSV.ToField Day where
+  toField = CSV.toField . formatTime defaultTimeLocale "%x"
+
+instance CSV.FromField Day where
+  parseField f = parseDate =<< (CSV.parseField f :: CSV.Parser String)
+
+parseDate :: (CM.MonadPlus m) => String -> m Day
+parseDate s = case parseTimes s of
+  [t] -> return t
+  otherwise -> CM.mzero
+  where
+    parseTimes s = [t | (t,r) <- readSTime True defaultTimeLocale "%x" s, all isSpace r]
+
+instance CSV.ToRecord Entry
+instance CSV.FromRecord Entry
 
 -- | Our custom CSV options 
 csvEncodeOptions = CSV.defaultEncodeOptions 
@@ -61,4 +71,5 @@ loadCSVFile f = do
     -- | convert the result from a Vector to a []
     mklist = return . GE.toList
     -- | or convert to a SomeException
-    mkerror = throwM . CSVParseException
+    mkerror s = throwM . CSVParseException $
+      "Parser error in file: " ++ f ++ " \n" ++ s

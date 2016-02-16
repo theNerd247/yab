@@ -55,6 +55,7 @@ Test-Suite test-yab
     ,yab
     ,containers
     ,time
+    ,cassava
     ,hsshellscript
     ,filepath
 
@@ -64,7 +65,6 @@ library
     Data.Budget
     ,Data.Budget.Budget
     ,Data.Budget.Entry
-    ,Data.Budget.Day
     ,Data.Serialization
     ,Data.Serialization.Yaml
     ,Data.Serialization.Errors

@@ -20,7 +20,6 @@ module Data.Budget.Entry
 where
 
 import YabCommon
-import Data.Budget.Day
 
 import qualified Data.List as DL
 import qualified Data.Map.Lazy as DML
