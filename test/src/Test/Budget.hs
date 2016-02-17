@@ -17,6 +17,7 @@ module Test.Budget
 where
 
 import Test.QuickCheck
+import Test.QuickCheck.Monadic
 import Data.Budget
 import Test.LoremWords
 
@@ -54,3 +55,24 @@ instance Arbitrary Budget where
     <$> arbitrary
     <*> posNum
     <*> posNum
+
+prop_AddAccount :: BudgetAccounts -> Property
+prop_AddAccount b = monadicIO $ do
+  n    <- run $ generate arbitrary
+  acnt <- run $ generate arbitrary
+  assert . maybe False (\_ -> True) $ DM.lookup n (addAccount n acnt b)
+
+prop_RemoveAccount :: BudgetAccounts -> Property
+prop_RemoveAccount b = monadicIO $ do
+  n <- run . generate $ genAccName b
+  assert . maybe True (\_ -> False) $ DM.lookup n =<< removeAccount n b
+
+prop_MergeAccount :: BudgetAccounts -> Property
+prop_MergeAccount b = monadicIO $ do
+  n1 <- run . generate $ genAccName b
+  n2 <- run . generate $ suchThat (genAccName b) (n1 /=)
+  assert . maybe False (\_ -> True) $ DM.lookup n1 =<< mergeAccounts n1 n2 b
+
+genAccName b = do 
+  i <- choose (0,DM.size b)
+  return . fst $ DM.elemAt i b
