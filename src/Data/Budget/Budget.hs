@@ -77,20 +77,17 @@ checkBudgetBalanced (Budget {budgetAccounts = as, budgetIncome = i}) =
     True -> liftIO $ putStrLn "Budget is balanced!" 
     False -> liftIO . putStrLn $ "Budget is unbalanced: " ++ (show bal)
 
-checkAccounts :: (MonadIO m) => Budget -> m ()
-checkAccounts = sequence_ . fmap runCheckAccount . DM.toList . budgetAccounts
-  where
-    runCheckAccount (n,a) = checkAccount n a
+-- | Checks the accounts contained within a budget using @checkAccount@
+checkAccounts :: (MonadIO m) => Budget -> m (DM.Map Name Bool)
+checkAccounts = fmap checkAccount . budgetAccounts
 
 -- | Checks the given account to make sure that it's balance isn't negative
-checkAccount :: (MonadIO m) => Name -> Account -> m ()
+checkAccount :: (MonadIO m) => Account -> Bool
 checkAccount accName (Account {accountEntries = es, accountAmount = i}) = 
   let bal = Prelude.foldr ((+) . entryAmount) 0 es
-  in case bal >= 0 of
-    True -> liftIO . putStrLn $ "Account: " ++ accName ++ " is ok! " ++ (showAmount bal)
-    False -> liftIO . putStrLn $ "Account: " ++ accName ++ "is off! Min payoff: " 
-      ++ (showAmount $ findMinPayOff bal i)
+  in bal >= 0
 
+-- TODO: move this function out of this module
 showAmount amnt = ("$"++) $ maybe s (flip take s . (+3)) $ i
   where 
     s = show amnt
