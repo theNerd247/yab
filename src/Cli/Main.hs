@@ -20,6 +20,7 @@ import Data.Budget
 import Data.Serialization
 import Cli.Types
 import Cli.Parser
+import Cli.Budget
 
 import qualified System.Directory as SD
 import qualified System.FilePath.Posix as SFP
@@ -84,10 +85,10 @@ instance Command AccountCommand where
         accB = accountB ops
 
   runCmd (AccountStatus ops) = 
-       runAccountCmd $ (checkAccount ops =<<) . getAccount ops
+       runAccountCmd $ (printAccountStatus ops =<<) . getAccount ops
 
 instance Command BudgetCommand where
-  runCmd BudgetStatus = runWithBudget $ \b -> checkBudgetBalanced b >> checkAccounts b
+  runCmd BudgetStatus = runWithBudget $ \b -> printBudgetBalanced b >> printAccountStatuses b
   runCmd (NewPayCheck ops) = undefined
 
 getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account

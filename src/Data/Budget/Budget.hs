@@ -29,6 +29,9 @@ module Data.Budget.Budget
   ,removeAccount
   ,mergeAccounts
   ,showAmount
+  ,accountBalance
+  ,budgetBalance
+  ,findMinPayOff
 )
 where
 
@@ -70,24 +73,24 @@ instance Show NoSuchAccount where
 instance Exception NoSuchAccount
 
 -- | Checks if a budget is balanced (its income is equal to its spending)
-checkBudgetBalanced :: (MonadIO m) => Budget -> m ()
-checkBudgetBalanced (Budget {budgetAccounts = as, budgetIncome = i}) = 
-  let bal = i - (sum $ accountAmount <$> as)
-  in case bal >= 0 of
-    True -> liftIO $ putStrLn "Budget is balanced!" 
-    False -> liftIO . putStrLn $ "Budget is unbalanced: " ++ (show bal)
+checkBudgetBalanced :: Budget -> Bool
+checkBudgetBalanced = (>= 0) . budgetBalance
+
+budgetBalance :: Budget -> Amount
+budgetBalance (Budget {budgetAccounts = as, budgetIncome = i}) = 
+  i - (sum $ accountAmount <$> as)
 
 -- | Checks the accounts contained within a budget using @checkAccount@
-checkAccounts :: (MonadIO m) => Budget -> m (DM.Map Name Bool)
+checkAccounts :: Budget -> DM.Map Name Bool
 checkAccounts = fmap checkAccount . budgetAccounts
 
 -- | Checks the given account to make sure that it's balance isn't negative
-checkAccount :: (MonadIO m) => Account -> Bool
-checkAccount accName (Account {accountEntries = es, accountAmount = i}) = 
-  let bal = Prelude.foldr ((+) . entryAmount) 0 es
-  in bal >= 0
+checkAccount :: Account -> Bool
+checkAccount = (>=0) . accountBalance 
 
--- TODO: move this function out of this module
+accountBalance (Account {accountEntries = es, accountAmount = i}) = 
+  Prelude.foldr ((+) . entryAmount) 0 es
+
 showAmount amnt = ("$"++) $ maybe s (flip take s . (+3)) $ i
   where 
     s = show amnt
