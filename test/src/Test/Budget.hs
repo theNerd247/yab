@@ -13,6 +13,9 @@ Portability : POSIX
 
 module Test.Budget
 (
+prop_AddAccount
+,prop_RemoveAccount
+,prop_MergeAccount
 )
 where
 

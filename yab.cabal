@@ -73,7 +73,7 @@ library
     ,Cli.Main
     ,Cli.Parser
     ,Cli.Types
-    ,CLi.Budget
+    ,Cli.Budget
   
   -- Modules included in this library but not exported.
   -- other-modules:       

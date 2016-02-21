@@ -45,3 +45,6 @@ main = do
   putStrLn $ "Test data at: " ++ tstDir
   runCheck $ (prop_CSVField :: Day -> Bool)
   runCheck $ (prop_Serialize (tstDir </> "budget.yaml") :: Budget -> Property)
+  runCheck $ prop_AddAccount
+  runCheck $ prop_RemoveAccount
+  runCheck $ prop_MergeAccount
