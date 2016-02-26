@@ -32,6 +32,7 @@ module Data.Budget.Budget
   ,accountBalance
   ,budgetBalance
   ,findMinPayOff
+  ,newPaycheck
 )
 where
 
@@ -123,6 +124,21 @@ mergeAccounts na nb bas = do
   return $ DM.adjust (\_ -> mergeAccountData accA accB) na b
   where 
     checkFail m n = maybe (throwM $ NoSuchAccount n) return m
+
+newDefaultPaycheck :: (MonadIO m) => Budget -> m Budget
+newDefaultPaycheck b@(Budget{
+                     budgetAccounts = ba
+                     , budgetIncome = bi
+                     }) = today >>= (\t -> return $ newPaycheck bi t b)
+
+newPaycheck :: Amount -> Day -> Budget -> Budget
+newPaycheck a d b = b{budgetAccounts = newPaycheckAccount <$> (budgetAccounts b)}
+  where
+    newPaycheckAccount a@(Account{accountAmount = am, accountEntries = ens}) 
+      = a{accountEntries = (ens ++ [newPaycheckEntry am])}
+    newPaycheckEntry aa 
+      = Entry {entryDate = d, entryDesc = "new paycheck", entryAmount = aa*paycheckRatio}
+    paycheckRatio = a / (budgetIncome b)
 
 findMinPayOff total rate
   | total >= 0 || rate == 0 = 0

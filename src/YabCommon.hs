@@ -1,6 +1,6 @@
 {-|
 Module      : YabCommon
-Description : Common imports and types used for yab
+Description : Common imports, types, and functions used for yab
 Copyright   : 
 License     : GPL-2
 Maintainer  : theNerd247
@@ -17,6 +17,7 @@ module YabCommon
   ,module Data.Typeable
   ,module GHC.Generics
   ,module Data.Time
+  ,today
 )
 where
 
@@ -26,3 +27,6 @@ import Data.Scientific
 import Data.Typeable
 import GHC.Generics
 import Data.Time
+
+today :: (MonadIO m) => m Day
+today = liftIO $ getCurrentTime >>= return . utctDay

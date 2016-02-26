@@ -16,6 +16,7 @@ module Test.Budget
 prop_AddAccount
 ,prop_RemoveAccount
 ,prop_MergeAccount
+,prop_Newpaycheck
 )
 where
 
@@ -24,6 +25,7 @@ import Test.QuickCheck.Monadic
 import Data.Budget
 import Test.LoremWords
 
+import qualified Data.Monoid as DMo
 import qualified Data.Map as DM
 import qualified Data.Time as DT
 
@@ -56,14 +58,12 @@ instance Arbitrary (DM.Map Name Account) where
 instance Arbitrary Budget where
   arbitrary = Budget 
     <$> arbitrary
-    <*> posNum
-    <*> posNum
+    <*> suchThat posNum (/= 0)
+    <*> suchThat posNum (/= 0)
 
-prop_AddAccount :: BudgetAccounts -> Property
-prop_AddAccount b = monadicIO $ do
-  n    <- run $ generate arbitrary
-  acnt <- run $ generate arbitrary
-  assert . maybe False (\_ -> True) $ DM.lookup n (addAccount n acnt b)
+prop_AddAccount :: Name -> Amount -> BudgetAccounts -> Bool
+prop_AddAccount n acnt b = 
+  maybe False (\_ -> True) $ DM.lookup n (addAccount n acnt b)
 
 prop_RemoveAccount :: BudgetAccounts -> Property
 prop_RemoveAccount b = monadicIO $ do
@@ -79,3 +79,14 @@ prop_MergeAccount b = monadicIO $ do
 genAccName b = do 
   i <- choose (0,DM.size b)
   return . fst $ DM.elemAt i b
+
+prop_Newpaycheck :: Amount -> DT.Day -> Budget -> Property
+prop_Newpaycheck am d b = 
+  label ("Newpaycheck: " ++ (show np))
+  $ DMo.getAll $ foldMap checkAccounts (budgetAccounts np)
+  where 
+    np = newPaycheck am d b
+    bi = budgetIncome b
+    checkAccounts a = checkEntry ((accountAmount a) * (am / bi)) . last . accountEntries $ a 
+    checkEntry eam entry = DMo.All $ (testEntry eam) == entry
+    testEntry a = Entry{entryDate = d, entryDesc = "new paycheck", entryAmount = a}

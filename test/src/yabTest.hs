@@ -31,13 +31,22 @@ prop_CSVField d =
     da :: (CSV.FromField a, CSV.ToField a) => a -> CSV.Parser a
     da = CSV.parseField . CSV.toField
 
+mktempDir :: (MonadIO m) => m String
 mktempDir = liftIO $ HShell.tmp_dir "/tmp/"
 
 checkFailure :: Result -> IO a
-checkFailure (Success _ _ o) = putStrLn o >> exitSuccess
-checkFailure _ = exitFailure
+checkFailure (Success _ ls _) = do 
+  putStrLn $ "Labels: " ++ (show ls)
+  exitSuccess
 
-runCheck p = checkFailure =<< verboseCheckResult p
+checkFailure Failure{labels = ls} = do
+  putStrLn $ "Labels: " ++ (show ls)
+  exitFailure
+
+checkMult :: Double -> Double -> Double -> Bool
+checkMult a b c = (a * b / c) == (a * (b/c))
+
+runCheck p = checkFailure =<< quickCheckResult p
 
 main = do
   tstDir <- mktempDir
@@ -48,3 +57,5 @@ main = do
   runCheck $ prop_AddAccount
   runCheck $ prop_RemoveAccount
   runCheck $ prop_MergeAccount
+  runCheck $ prop_Newpaycheck
+  runCheck $ checkMult
