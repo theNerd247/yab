@@ -58,6 +58,9 @@ Test-Suite test-yab
     ,cassava
     ,hsshellscript
     ,filepath
+    ,test-framework-quickcheck2
+    ,test-framework
+    
 
 library
   -- Modules exported by the library.

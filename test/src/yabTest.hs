@@ -4,58 +4,36 @@ module Main where
 import Test.QuickCheck
 import Test.QuickCheck.Monadic 
 import Test.Budget
+import Test.Serialization
 
 import Data.Budget
 import Data.Serialization
-import System.Exit
 
-import qualified Data.Csv as CSV
-import qualified HsShellScript as HShell
-
-import System.FilePath.Posix ((</>))
-import Control.Monad (mzero)
+import Test.Framework(defaultMain,testGroup,Test)
+import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import YabCommon
 
-prop_Serialize fp d = monadicIO $ do 
-  run $ serialize fp d
-  r <- run $ deserialize fp
-  assert $ r == d
+main = defaultMain tests
 
-prop_CSVField :: (Eq a, CSV.FromField a, CSV.ToField a) => a -> Bool
-prop_CSVField d = 
-  case CSV.runParser $ da d of
-    Left _ -> False
-    Right dd -> dd == d
-  where
-    da :: (CSV.FromField a, CSV.ToField a) => a -> CSV.Parser a
-    da = CSV.parseField . CSV.toField
+tests = [testGroup n ts | (n,ts) <- [
+  {-("Serialize",serializeTests)-}
+  ("Budget",budgetTests)
+  ]]
 
-mktempDir :: (MonadIO m) => m String
-mktempDir = liftIO $ HShell.tmp_dir "/tmp/"
+serializeTests = [
+  {-("csv_day",prop_CSVField :: Day -> Bool)-}
+  testProperty "with_temp_dir" tempDirsTests
+  ]
 
-checkFailure :: Result -> IO a
-checkFailure (Success _ ls _) = do 
-  putStrLn $ "Labels: " ++ (show ls)
-  exitSuccess
+tempDirsTests = withTempDir $ [
+  prop_SerializeBudget
+  ]
 
-checkFailure Failure{labels = ls} = do
-  putStrLn $ "Labels: " ++ (show ls)
-  exitFailure
-
-checkMult :: Double -> Double -> Double -> Bool
-checkMult a b c = (a * b / c) == (a * (b/c))
-
-runCheck p = checkFailure =<< quickCheckResult p
-
-main = do
-  tstDir <- mktempDir
-  HShell.mkdir $ tstDir </> "accounts"
-  putStrLn $ "Test data at: " ++ tstDir
-  runCheck $ (prop_CSVField :: Day -> Bool)
-  runCheck $ (prop_Serialize (tstDir </> "budget.yaml") :: Budget -> Property)
-  runCheck $ prop_AddAccount
-  runCheck $ prop_RemoveAccount
-  runCheck $ prop_MergeAccount
-  runCheck $ prop_Newpaycheck
-  runCheck $ checkMult
+budgetTests :: [Test]
+budgetTests = [
+  testProperty "add_account" prop_AddAccount
+  ,testProperty "remove_account" prop_RemoveAccount
+  ,testProperty "merge_account" prop_MergeAccount
+  ,testProperty "new_paycheck" prop_Newpaycheck
+  ]

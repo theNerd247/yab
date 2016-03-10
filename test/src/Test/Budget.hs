@@ -61,23 +61,28 @@ instance Arbitrary Budget where
     <*> suchThat posNum (/= 0)
     <*> suchThat posNum (/= 0)
 
+newtype NonEmptyMap k a = NonEmptyMap {getNonEmptyMap :: DM.Map k a} deriving (Eq,Ord,Show)
+
+instance (Ord k, Arbitrary k, Arbitrary a) => Arbitrary (NonEmptyMap k a) where
+  arbitrary = NonEmptyMap . DM.fromList . getNonEmpty <$> arbitrary
+
 prop_AddAccount :: Name -> Amount -> BudgetAccounts -> Bool
 prop_AddAccount n acnt b = 
   maybe False (\_ -> True) $ DM.lookup n (addAccount n acnt b)
 
-prop_RemoveAccount :: BudgetAccounts -> Property
-prop_RemoveAccount b = monadicIO $ do
+prop_RemoveAccount :: NonEmptyMap Name Account -> Property
+prop_RemoveAccount (NonEmptyMap b) = monadicIO $ do
   n <- run . generate $ genAccName b
   assert . maybe True (\_ -> False) $ DM.lookup n =<< removeAccount n b
 
-prop_MergeAccount :: BudgetAccounts -> Property
-prop_MergeAccount b = monadicIO $ do
+prop_MergeAccount :: NonEmptyMap Name Account -> Property
+prop_MergeAccount (NonEmptyMap b) = monadicIO $ do
   n1 <- run . generate $ genAccName b
   n2 <- run . generate $ suchThat (genAccName b) (n1 /=)
   assert . maybe False (\_ -> True) $ DM.lookup n1 =<< mergeAccounts n1 n2 b
 
-genAccName b = do 
-  i <- choose (0,DM.size b)
+genAccName b = do
+  i <- choose (0,(DM.size b - 1))
   return . fst $ DM.elemAt i b
 
 prop_Newpaycheck :: Amount -> DT.Day -> Budget -> Property
