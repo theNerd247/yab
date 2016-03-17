@@ -17,13 +17,14 @@ import YabCommon
 main = defaultMain tests
 
 tests = [testGroup n ts | (n,ts) <- [
-  {-("Serialize",serializeTests)-}
-  ("Budget",budgetTests)
+  ("Serialize",serializeTests)
+  ,("Budget",budgetTests)
   ]]
 
+serializeTests :: [Test]
 serializeTests = [
-  {-("csv_day",prop_CSVField :: Day -> Bool)-}
-  testProperty "with_temp_dir" tempDirsTests
+  testProperty "csv_day" (prop_CSVField :: Day -> Bool)
+  ,testProperty "with_temp_dir" tempDirsTests
   ]
 
 tempDirsTests = withTempDir $ [

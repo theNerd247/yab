@@ -66,6 +66,11 @@ newtype NonEmptyMap k a = NonEmptyMap {getNonEmptyMap :: DM.Map k a} deriving (E
 instance (Ord k, Arbitrary k, Arbitrary a) => Arbitrary (NonEmptyMap k a) where
   arbitrary = NonEmptyMap . DM.fromList . getNonEmpty <$> arbitrary
 
+newtype NonSingleMap k a = NonSingleMap {getNonSingleMap :: DM.Map k a} deriving (Eq,Ord,Show)
+
+instance (Ord k, Arbitrary k, Arbitrary a) => Arbitrary (NonSingleMap k a) where
+  arbitrary = NonSingleMap . DM.fromList <$> suchThat arbitrary ((1 <) . length)
+
 prop_AddAccount :: Name -> Amount -> BudgetAccounts -> Bool
 prop_AddAccount n acnt b = 
   maybe False (\_ -> True) $ DM.lookup n (addAccount n acnt b)
@@ -75,11 +80,19 @@ prop_RemoveAccount (NonEmptyMap b) = monadicIO $ do
   n <- run . generate $ genAccName b
   assert . maybe True (\_ -> False) $ DM.lookup n =<< removeAccount n b
 
-prop_MergeAccount :: NonEmptyMap Name Account -> Property
-prop_MergeAccount (NonEmptyMap b) = monadicIO $ do
+prop_MergeAccount :: NonSingleMap Name Account -> Property
+prop_MergeAccount (NonSingleMap b) = monadicIO $ do
   n1 <- run . generate $ genAccName b
   n2 <- run . generate $ suchThat (genAccName b) (n1 /=)
-  assert . maybe False (\_ -> True) $ DM.lookup n1 =<< mergeAccounts n1 n2 b
+  n3 <- run . generate $ suchThat arbitrary (flip DM.notMember b)
+  assert . DMo.getAll . mconcat $ [
+    testMerge n1 n2 True
+    ,testMerge n1 n3 False
+    ,testMerge n2 n3 False
+    ]
+  where
+    expect a = (a==) . maybe False (\_ -> True)
+    testMerge n1 n2 e = DMo.All . (expect e) $ DM.lookup n1 =<< mergeAccounts n1 n2 b
 
 genAccName b = do
   i <- choose (0,(DM.size b - 1))
