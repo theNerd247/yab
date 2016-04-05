@@ -19,7 +19,6 @@ module Test.Serialization
   prop_SerializeBudget
   ,prop_CSVField
   ,prop_Serialize
-  ,withTempDir
   ,mktempDirs
 )
 where
@@ -43,12 +42,6 @@ prop_Serialize fp d = monadicIO $ do
 
 prop_SerializeBudget :: FilePath -> Budget -> Property
 prop_SerializeBudget = prop_Serialize . (</> "budget.yaml")
-
--- | runs properties that require the temporary budget filepath and conjoins the results
-withTempDir :: (Testable a) => [FilePath -> a] -> Property
-withTempDir ps = monadicIO $ do 
-  d <- mktempDirs
-  return $ conjoin [f $ d | f <- ps]
 
 prop_CSVField :: (Eq a, CSV.FromField a, CSV.ToField a) => a -> Bool
 prop_CSVField d = 

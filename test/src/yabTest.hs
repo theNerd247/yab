@@ -14,21 +14,21 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import YabCommon
 
-main = defaultMain tests
+main = do
+  d <- mktempDirs
+  putStrLn $ "Saving Test Data To: " ++ d
+  defaultMain $ tests d 
 
-tests = [testGroup n ts | (n,ts) <- [
-  ("Serialize",serializeTests)
+tests :: FilePath -> [Test]
+tests d = [testGroup n ts | (n,ts) <- [
+  ("Serialize",serializeTests d)
   ,("Budget",budgetTests)
   ]]
 
-serializeTests :: [Test]
-serializeTests = [
+serializeTests :: FilePath -> [Test]
+serializeTests d = [
   testProperty "csv_day" (prop_CSVField :: Day -> Bool)
-  ,testProperty "with_temp_dir" tempDirsTests
-  ]
-
-tempDirsTests = withTempDir $ [
-  prop_SerializeBudget
+  ,testProperty "budget_serialization" (prop_SerializeBudget d)
   ]
 
 budgetTests :: [Test]

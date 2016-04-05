@@ -31,13 +31,14 @@ class Parseable a where
   parse :: OA.Parser a
 
 getProgOpts :: (MonadIO m) => m MainProg
-getProgOpts = liftIO $ OA.execParser opts
+getProgOpts = liftIO $ OA.customExecParser prefs opts
   where
     opts = OA.info (OA.helper <*> parse)
       (
          OA.fullDesc
       <> OA.header "Yet Another Budgeting Program"
       )
+    prefs = OA.prefs $ OA.showHelpOnError
 
 cmd' n h ops = OA.command n $ OA.info ops (OA.progDesc h)
 
@@ -56,8 +57,8 @@ pBudgetFile = OA.strOption $
 
 instance Parseable Prog where
   parse = OA.subparser $
-       cmd' "budget" "General budget commands" (BudgetProg <$> parse) 
-    <> cmd' "account" "General account commands" (AccountProg <$> parse)
+       cmd' "budget" "Commands to interface with the budget" (BudgetProg <$> parse) 
+    <> cmd' "account" "Commands to interface with accounts" (AccountProg <$> parse)
 
 class CommandGroup a where
   cmds :: [OA.Mod OA.CommandFields a]
