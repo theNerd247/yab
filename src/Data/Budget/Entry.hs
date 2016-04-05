@@ -20,25 +20,22 @@ module Data.Budget.Entry
 where
 
 import YabCommon
+
 import qualified Data.List as DL
-import qualified Data.Time as DT
 import qualified Data.Map.Lazy as DML
 
 -- | A single entry in an account file
 data Entry = Entry
   {
     -- | The date of the entry
-    entryDate   :: DT.Day
+    entryDate   :: Day
     -- | The description of the entry
     ,entryDesc   :: String
     -- | The amount of the entry 
-    ,entryAmount :: Amount
+    ,entryAmount :: Double
   }
-  deriving (Generic,Typeable,Show,Read)
+  deriving (Generic,Typeable,Show,Read,Eq)
 
 type Entries = [Entry]
-
--- | Each account is a binding to a list of entries and a name
-type Account = DML.Map Name Entries
 
 filterEntries = DL.filter

@@ -4,24 +4,37 @@ module Main where
 import Test.QuickCheck
 import Test.QuickCheck.Monadic 
 import Test.Budget
+import Test.Serialization
 
 import Data.Budget
 import Data.Serialization
-import System.Exit
 
-testBudgetFilePath = "/tmp/tstBudget.yaml"
+import Test.Framework(defaultMain,testGroup,Test)
+import Test.Framework.Providers.QuickCheck2 (testProperty)
 
-prop_yamlIO fp d = monadicIO $ do 
-  run $ writeYamlFile fp d
-  r <- run $ readYamlFile fp
-  assert $ r == d
-
-checkFailure :: Result -> IO a
-checkFailure (Success _ _ o) = putStrLn o >> exitSuccess
-checkFailure _ = exitFailure
-
-runCheck p = checkFailure =<< verboseCheckResult p
+import YabCommon
 
 main = do
-  runCheck $ (prop_yamlIO testBudgetFilePath :: BudgetAccount -> Property)
-  runCheck $ (prop_yamlIO testBudgetFilePath :: Budget -> Property)
+  d <- mktempDirs
+  putStrLn $ "Saving Test Data To: " ++ d
+  defaultMain $ tests d 
+
+tests :: FilePath -> [Test]
+tests d = [testGroup n ts | (n,ts) <- [
+  ("Serialize",serializeTests d)
+  ,("Budget",budgetTests)
+  ]]
+
+serializeTests :: FilePath -> [Test]
+serializeTests d = [
+  testProperty "csv_day" (prop_CSVField :: Day -> Bool)
+  ,testProperty "budget_serialization" (prop_SerializeBudget d)
+  ]
+
+budgetTests :: [Test]
+budgetTests = [
+  testProperty "add_account" prop_AddAccount
+  ,testProperty "remove_account" prop_RemoveAccount
+  ,testProperty "merge_account" prop_MergeAccount
+  ,testProperty "new_paycheck" prop_Newpaycheck
+  ]

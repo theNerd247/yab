@@ -54,17 +54,29 @@ Test-Suite test-yab
     ,QuickCheck
     ,yab
     ,containers
+    ,time
+    ,cassava
+    ,hsshellscript
+    ,filepath
+    ,test-framework-quickcheck2
+    ,test-framework
+    
 
 library
   -- Modules exported by the library.
   exposed-modules:     
     Data.Budget
-    Data.Budget.Budget
-    Data.Budget.Entry
-    Data.Serialization
-    Data.Serialization.Yaml
-    Data.Serialization.Errors
-    Data.Serialization.Csv
+    ,Data.Budget.Budget
+    ,Data.Budget.Entry
+    ,Data.Serialization
+    ,Data.Serialization.Yaml
+    ,Data.Serialization.Errors
+    ,Data.Serialization.Csv
+    ,YabCommon
+    ,Cli.Main
+    ,Cli.Parser
+    ,Cli.Types
+    ,Cli.Budget
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -85,9 +97,30 @@ library
                      ,bytestring
                      ,scientific
                      ,aeson
+                     ,directory
+                     ,optparse-applicative
 
   -- Directories containing source files.
   hs-source-dirs:      src
 
   -- Base language which the package is written in.
   default-language:    Haskell2010
+
+executable yab
+  main-is: main.hs
+  hs-source-dirs: src
+  build-depends:      base >=4.8 && <4.9
+                     ,yab
+                     ,yaml
+                     ,exceptions
+                     ,filepath
+                     ,transformers
+                     ,containers
+                     ,time
+                     ,cassava
+                     ,vector
+                     ,bytestring
+                     ,scientific
+                     ,aeson
+                     ,directory
+                     ,optparse-applicative
