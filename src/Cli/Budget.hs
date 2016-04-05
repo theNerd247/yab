@@ -33,6 +33,6 @@ printAccountStatuses = sequence_ . DM.elems . DM.mapWithKey printAccountStatus .
 printAccountStatus accName a@(Account {accountAmount = i}) = case checkAccount a of
   True -> liftIO . putStrLn $ "Account: " ++ accName ++ " is ok! " ++ (showAmount bal)
   False -> liftIO . putStrLn $ 
-    "Account: " ++ accName ++ "is off! Min payoff: " ++ (showAmount $ findMinPayOff bal i)
+    "Account: " ++ accName ++ " is off! Min payoff: " ++ (showDecimal $ findMinPayOff bal i)
   where
     bal = accountBalance a

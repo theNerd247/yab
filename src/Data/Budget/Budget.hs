@@ -29,6 +29,7 @@ module Data.Budget.Budget
   ,removeAccount
   ,mergeAccounts
   ,showAmount
+  ,showDecimal
   ,accountBalance
   ,budgetBalance
   ,findMinPayOff
@@ -92,9 +93,13 @@ checkAccount = (>=0) . accountBalance
 accountBalance (Account {accountEntries = es, accountAmount = i}) = 
   Prelude.foldr ((+) . entryAmount) 0 es
 
-showAmount amnt = ("$"++) $ maybe s (flip take s . (+3)) $ i
+showAmount :: (Show a) => a -> String
+showAmount = ("$"++) . showDecimal
+
+showDecimal :: (Show a) => a -> String
+showDecimal d = maybe s (flip take s . (+3)) $ i
   where 
-    s = show amnt
+    s = show d
     i = DL.elemIndex '.' s
 
 -- | Merges two accounts. This is usefull for merging the data for accounts that
