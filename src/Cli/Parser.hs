@@ -51,12 +51,12 @@ instance Parseable MainOpts where
 pBudgetFile = OA.strOption $ 
      OA.value "."
   <> OA.short 'b'
-  <> OA.long "budget"
+  <> OA.long "budget-path"
   <> OA.help "The budget config file to use"
   <> OA.metavar "BUDGETFILE"
 
 instance Parseable Prog where
-  parse = OA.subparser $
+  parse = OA.hsubparser $
        cmd' "budget" "Commands to interface with the budget" (BudgetProg <$> parse) 
     <> cmd' "account" "Commands to interface with accounts" (AccountProg <$> parse)
 
@@ -64,7 +64,7 @@ class CommandGroup a where
   cmds :: [OA.Mod OA.CommandFields a]
 
   parseCmds :: OA.Parser a
-  parseCmds = OA.subparser (mconcat cmds)
+  parseCmds = OA.hsubparser (mconcat cmds)
 
 instance Parseable BudgetCommand where
   parse = parseCmds
