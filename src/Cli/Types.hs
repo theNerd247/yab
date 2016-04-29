@@ -22,9 +22,9 @@ module Cli.Types
   ,BudgetCommand(..)
   ,AddAccountOpts(..)
   ,MergeAccountsOpts(..)
-  ,NewPaycheckOpts(..)
-  )
-    where
+  ,NewAccountEntryOps(..)
+)
+  where
 
 import YabCommon
 import Data.Budget
@@ -49,19 +49,22 @@ data Prog =
 
 data BudgetCommand = 
     BudgetStatus
-  | NewPayCheck NewPaycheckOpts
-
-data NewPaycheckOpts = NewPaycheckOpts
-  {
-    amount :: Maybe Amount
-  , date  :: Maybe Day
-  }
+  | NewPayCheck Amount Day
+  | ListAccounts
 
 data AccountCommand = 
     AddAccount AddAccountOpts
   | RemoveAccount Name
   | MergeAccounts MergeAccountsOpts
   | AccountStatus Name
+  | ShowEntries Name
+  | NewAccountEntry NewAccountEntryOps
+
+data NewAccountEntryOps = NewAccountEntryOps
+  {
+    newAccountEntryACName :: Name
+  , newAccountEntryEntry :: Entry 
+  }
 
 data AddAccountOpts = AddAccountOpts
   {

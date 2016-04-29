@@ -15,11 +15,14 @@ module Cli.Budget
   printAccountStatus
   ,printBudgetBalanced
   ,printAccountStatuses
+  ,printAccountList
+  ,printAccountEntries
 )
 where
 
 import YabCommon
 import Data.Budget
+import Data.Serialization
 import qualified Data.Map as DM
 
 printBudgetBalanced b = 
@@ -36,3 +39,11 @@ printAccountStatus accName a@(Account {accountAmount = i}) = case checkAccount a
     "Account: " ++ accName ++ " is off! Min payoff: " ++ (showDecimal $ findMinPayOff bal i)
   where
     bal = accountBalance a
+
+printAccountList :: (MonadIO m) => Budget -> m ()
+printAccountList = liftIO . mapM_ putStrLn . DM.keys . budgetAccounts
+
+printAccountEntries :: (MonadIO m) => Account -> m () 
+printAccountEntries = liftIO . mapM_ (putStrLn . printEntry) . accountEntries
+  where
+    printEntry (Entry da de a) = (show da) ++ " " ++ (show $ take 40 de) ++ " " ++ (showAmount a)

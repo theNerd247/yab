@@ -22,6 +22,7 @@ import Cli.Types
 import Cli.Parser
 import Cli.Budget
 
+import qualified Data.List as DL
 import qualified System.Directory as SD
 import qualified System.FilePath.Posix as SFP
 import qualified Data.Map as DM
@@ -85,11 +86,26 @@ instance Command AccountCommand where
         accB = accountB ops
 
   runCmd (AccountStatus ops) = 
-       runAccountCmd $ (printAccountStatus ops =<<) . getAccount ops
+    runAccountCmd $ (printAccountStatus ops =<<) . getAccount ops
+
+  runCmd (ShowEntries ops) =
+    runAccountCmd $ (printAccountEntries =<<) . getAccount ops
+
+  runCmd (NewAccountEntry ops) = 
+    runAccountCmd $ saveAccounts . DM.adjust mkEntries (newAccountEntryACName ops)
+      where
+        mkEntries a = a {accountEntries = apnd (newAccountEntryEntry ops) . accountEntries $ a}
+        apnd a l = l ++ [a]
 
 instance Command BudgetCommand where
   runCmd BudgetStatus = runWithBudget $ \b -> printBudgetBalanced b >> printAccountStatuses b
-  runCmd (NewPayCheck ops) = undefined
+
+  runCmd (NewPayCheck am da) = do
+    b <- runWithBudget $ return . newPaycheck am da
+    modifyBudget b 
+    saveBudget
+
+  runCmd ListAccounts = runWithBudget printAccountList
 
 getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account
 getAccount name =  maybe (throwM $ NoSuchAccount name) return . DM.lookup name
@@ -103,14 +119,16 @@ saveBudget = do
     bfp <- CMS.gets budgetFilePath
     serialize bfp b
 
-modifyAccounts :: BudgetAccounts -> CliState -> CliState
-modifyAccounts a s@(CliState{budget = b}) = s {budget = b {budgetAccounts = a}}
+modifyBudget :: Budget -> CliM ()
+modifyBudget b = CMS.modify $ \s -> s{budget = b}
+
+modifyAccounts :: BudgetAccounts -> CliM ()
+modifyAccounts a = CMS.modify $ \s@(CliState{budget = b}) -> s {budget = b {budgetAccounts = a}}
 
 runAccountCmd :: (BudgetAccounts -> CliM a) -> CliM a
-runAccountCmd f =
-  runWithBudget (f . budgetAccounts)
+runAccountCmd f = runWithBudget (f . budgetAccounts)
 
 saveAccounts :: BudgetAccounts -> CliM ()
-saveAccounts accs = CMS.modify (modifyAccounts accs) >> saveBudget
+saveAccounts accs = modifyAccounts accs >> saveBudget
 
 printOut = liftIO . putStrLn

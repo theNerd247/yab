@@ -20,6 +20,7 @@ where
 
 import YabCommon
 import Data.Budget
+import Data.Serialization
 import Cli.Types
 import Control.Applicative
 
@@ -48,7 +49,7 @@ instance Parseable MainProg where
 instance Parseable MainOpts where
   parse = MainOpts <$> pBudgetFile
 
-pBudgetFile = OA.strOption $ 
+pBudgetFile = OA.strOption $
      OA.value "."
   <> OA.short 'b'
   <> OA.long "budget-path"
@@ -72,12 +73,10 @@ instance Parseable BudgetCommand where
 instance CommandGroup BudgetCommand where
   cmds = 
     [
-      cmd' "status" "get the overal status of the budget" (pure BudgetStatus)
-     ,cmd' "newpay" "adds a new paycheck to the accounts based on the given budget" $ NewPayCheck <$> parse
+      cmd' "status" "get the overal status of the budget" $ pure BudgetStatus
+     ,cmd' "newpay" "adds a new paycheck to the accounts" $ NewPayCheck <$> parse <*> parse
+     ,cmd' "ls" "list the accounts in the budget" $ pure ListAccounts 
     ]
-
-instance Parseable NewPaycheckOpts where
-  parse = NewPaycheckOpts <$> optional parse <*> optional parse
 
 instance Parseable AccountCommand where
   parse = parseCmds
@@ -89,6 +88,8 @@ instance CommandGroup AccountCommand where
      ,cmd' "rm" "remove an account" $ RemoveAccount <$> parse 
      ,cmd' "merge" "merges two accounts" $ MergeAccounts <$> parse
      ,cmd' "status" "the status of an account" $ AccountStatus <$> parse
+     ,cmd' "new-entry" "add a new entry to the account" $ NewAccountEntry <$> parse
+     ,cmd' "show" "show the account entries" $ ShowEntries <$> parse
     ]
 
 instance Parseable AddAccountOpts where
@@ -97,11 +98,20 @@ instance Parseable AddAccountOpts where
 instance Parseable MergeAccountsOpts where
   parse = MergeAccountsOpts <$> parse <*> parse
 
+instance Parseable NewAccountEntryOps where
+  parse = NewAccountEntryOps <$> parse <*> parse
+
 instance Parseable Amount where
   parse = OA.argument OA.auto $ OA.help "A dollar amount as a floating point number"
 
 instance Parseable Day where
-  parse = OA.argument OA.auto $ OA.help "A day in the format mm/dd/yy"
+  parse = OA.argument getDay $ OA.help "A day in the format mm/dd/yy"
+    where
+      -- use our parser to parse the date
+      getDay = OA.str >>= parseDate
 
 instance Parseable Name where
   parse = OA.strArgument $ OA.help "the name of an account defined in the budget file."
+
+instance Parseable Entry where
+  parse = Entry <$> parse <*> parse <*> parse
