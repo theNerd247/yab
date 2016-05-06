@@ -20,9 +20,6 @@ module Cli.Types
   ,Prog(..)
   ,AccountCommand(..)
   ,BudgetCommand(..)
-  ,AddAccountOpts(..)
-  ,MergeAccountsOpts(..)
-  ,NewAccountEntryOps(..)
 )
   where
 
@@ -51,29 +48,12 @@ data BudgetCommand =
     BudgetStatus
   | NewPayCheck Amount Day
   | ListAccounts
+  | InitBudgetDir
 
 data AccountCommand = 
-    AddAccount AddAccountOpts
+    AddAccount Name Amount
   | RemoveAccount Name
-  | MergeAccounts MergeAccountsOpts
+  | MergeAccounts Name Name
   | AccountStatus Name
   | ShowEntries Name
-  | NewAccountEntry NewAccountEntryOps
-
-data NewAccountEntryOps = NewAccountEntryOps
-  {
-    newAccountEntryACName :: Name
-  , newAccountEntryEntry :: Entry 
-  }
-
-data AddAccountOpts = AddAccountOpts
-  {
-    name  :: Name
-  , value :: Amount
-  }
-
-data MergeAccountsOpts = MergeAccountsOpts 
-  {
-    accountA  :: Name
-  , accountB  :: Name
-  }
+  | NewAccountEntry Name Entry

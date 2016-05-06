@@ -41,7 +41,7 @@ getProgOpts = liftIO $ OA.customExecParser prefs opts
       )
     prefs = OA.prefs $ OA.showHelpOnError
 
-cmd' n h ops = OA.command n $ OA.info ops (OA.progDesc h)
+cmd' n h ops = OA.command n $ OA.info ops (OA.fullDesc <> OA.progDesc h)
 
 instance Parseable MainProg where
   parse = MainProg <$> parse <*> parse
@@ -76,6 +76,7 @@ instance CommandGroup BudgetCommand where
       cmd' "status" "get the overal status of the budget" $ pure BudgetStatus
      ,cmd' "newpay" "adds a new paycheck to the accounts" $ NewPayCheck <$> parse <*> parse
      ,cmd' "ls" "list the accounts in the budget" $ pure ListAccounts 
+     ,cmd' "init" "initialize the budget directory" $ pure InitBudgetDir
     ]
 
 instance Parseable AccountCommand where
@@ -84,34 +85,31 @@ instance Parseable AccountCommand where
 instance CommandGroup AccountCommand where
   cmds = 
     [
-      cmd' "add" "add a new account" $ AddAccount <$> parse
+      cmd' "add" "add a new account" $ AddAccount <$> parse <*> parse
      ,cmd' "rm" "remove an account" $ RemoveAccount <$> parse 
-     ,cmd' "merge" "merges two accounts" $ MergeAccounts <$> parse
+     ,cmd' "merge" "merges two accounts into the first given" $ MergeAccounts <$> parse <*> parse
      ,cmd' "status" "the status of an account" $ AccountStatus <$> parse
-     ,cmd' "new-entry" "add a new entry to the account" $ NewAccountEntry <$> parse
+     ,cmd' "new-entry" "add a new entry to the account" $ NewAccountEntry <$> parse <*> parse
      ,cmd' "show" "show the account entries" $ ShowEntries <$> parse
     ]
 
-instance Parseable AddAccountOpts where
-  parse = AddAccountOpts <$> parse <*> parse
-
-instance Parseable MergeAccountsOpts where
-  parse = MergeAccountsOpts <$> parse <*> parse
-
-instance Parseable NewAccountEntryOps where
-  parse = NewAccountEntryOps <$> parse <*> parse
-
 instance Parseable Amount where
-  parse = OA.argument OA.auto $ OA.help "A dollar amount as a floating point number"
+  parse = OA.argument OA.auto $ 
+    OA.help "A dollar amount as a floating point number"
+    <> OA.metavar "AMNT"
 
 instance Parseable Day where
-  parse = OA.argument getDay $ OA.help "A day in the format mm/dd/yy"
+  parse = OA.argument getDay $ 
+      OA.help "A day in the format mm/dd/yy"
+      <> OA.metavar "DAY"
     where
       -- use our parser to parse the date
       getDay = OA.str >>= parseDate
 
 instance Parseable Name where
-  parse = OA.strArgument $ OA.help "the name of an account defined in the budget file."
+  parse = OA.strArgument $ 
+    OA.help "the name of an account defined in the budget file."
+    <> OA.metavar "NAME"
 
 instance Parseable Entry where
   parse = Entry <$> parse <*> parse <*> parse

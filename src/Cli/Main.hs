@@ -1,3 +1,6 @@
+{-#LANGUAGE DeriveGeneric #-}
+{-#LANGUAGE DeriveDataTypeable #-}
+
 {-|
 Module      : Name
 Description : modules for running the cli interfaces
@@ -30,34 +33,28 @@ import qualified Control.Monad.Trans.State.Lazy as CMS
 
 import System.FilePath.Posix ((</>))
 
-getBudgetFilePath :: MainOpts -> FilePath
-getBudgetFilePath = (</> "budget.yaml") . budgetFileDir
-
-runProg :: IO ()
-runProg = getProgOpts >>= mainProg
-
 data CliState = CliState
   {
-    budget :: Budget
-  , mOpts :: MainOpts
-  , budgetFilePath :: FilePath
+   mOpts :: MainOpts
   }
+
+data BudgetExistsException = BudgetExistsException deriving Typeable
+
+instance Show BudgetExistsException where
+  show BudgetExistsException = "budget.yaml already exists!"
+
+instance Exception BudgetExistsException
 
 type CliM = CMS.StateT CliState IO
 
 mainProg ops = do
-  b <- deserialize bfp
-  CMS.evalStateT (runCmd (prog ops)) (initState b)
+  CMS.evalStateT (runCmd (prog ops)) initState 
   `catchAll`
   printEAndExit
   where
-    mo = mainOpts ops
-    bfp = getBudgetFilePath mo
-    initState b = CliState 
+    initState = CliState 
       {
-        budget = b
-      , mOpts  = mo
-      , budgetFilePath = bfp
+       mOpts = mainOpts ops
       }
 
 class Command a where
@@ -68,33 +65,28 @@ instance Command Prog where
   runCmd (BudgetProg cmd) = runCmd cmd
 
 instance Command AccountCommand where
-  runCmd (AddAccount ops) = do 
-    runAccountCmd $ (saveAccounts =<<) . return . addAccount n (value ops)
-    printOut $ "Added account: " ++ n
-      where
-        n = name ops
+  runCmd (AddAccount name amount) = do 
+    runAccountCmdAndSave $ return . addAccount name amount
+    printOut $ "Added Account: " ++ name
     
-  runCmd (RemoveAccount ops) = do 
-    runAccountCmd $ (saveAccounts =<<) . removeAccount ops
-    printOut $ "Removed Account: " ++ ops
+  runCmd (RemoveAccount name) = do 
+    runAccountCmdAndSave $ removeAccount name
+    printOut $ "Removed Account: " ++ name
 
-  runCmd (MergeAccounts ops) = do 
-    runAccountCmd $ (saveAccounts =<<) . mergeAccounts accA accB
+  runCmd (MergeAccounts accA accB) = do 
+    runAccountCmdAndSave $ mergeAccounts accA accB
     printOut $ "Merged Accounts: " ++ accA ++ " " ++ accB
+
+  runCmd (AccountStatus name) = 
+    runAccountCmd $ (printAccountStatus name =<<) . getAccount name
+
+  runCmd (ShowEntries name) =
+    runAccountCmd $ (printAccountEntries =<<) . getAccount name
+
+  runCmd (NewAccountEntry name entry) = 
+    runAccountCmd $ saveAccounts . DM.adjust mkEntries name
       where
-        accA = accountA ops
-        accB = accountB ops
-
-  runCmd (AccountStatus ops) = 
-    runAccountCmd $ (printAccountStatus ops =<<) . getAccount ops
-
-  runCmd (ShowEntries ops) =
-    runAccountCmd $ (printAccountEntries =<<) . getAccount ops
-
-  runCmd (NewAccountEntry ops) = 
-    runAccountCmd $ saveAccounts . DM.adjust mkEntries (newAccountEntryACName ops)
-      where
-        mkEntries a = a {accountEntries = apnd (newAccountEntryEntry ops) . accountEntries $ a}
+        mkEntries a = a {accountEntries = apnd entry . accountEntries $ a}
         apnd a l = l ++ [a]
 
 instance Command BudgetCommand where
@@ -102,33 +94,47 @@ instance Command BudgetCommand where
 
   runCmd (NewPayCheck am da) = do
     b <- runWithBudget $ return . newPaycheck am da
-    modifyBudget b 
-    saveBudget
+    saveBudget b
+
+  runCmd InitBudgetDir = do
+    f <- getBudgetDir
+    -- create the new budget or throw an error because the file exists
+    b <- liftIO $ SD.doesFileExist (f </> "budget.yaml") >>= mkBudget
+    liftIO $ SD.createDirectoryIfMissing False $ f </> "accounts"
+    saveBudget b
+    where
+      mkBudget True = throwM BudgetExistsException
+      mkBudget False = return $ Budget DM.empty 0 0
 
   runCmd ListAccounts = runWithBudget printAccountList
+
+runProg :: IO ()
+runProg = getProgOpts >>= mainProg
 
 getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account
 getAccount name =  maybe (throwM $ NoSuchAccount name) return . DM.lookup name
 
 runWithBudget :: (Budget -> CliM a) -> CliM a
-runWithBudget f = CMS.gets budget >>= f
+runWithBudget f = getBudget >>= f
 
-saveBudget :: CliM ()
-saveBudget = do
-    b <- CMS.gets budget
-    bfp <- CMS.gets budgetFilePath
-    serialize bfp b
-
-modifyBudget :: Budget -> CliM ()
-modifyBudget b = CMS.modify $ \s -> s{budget = b}
-
-modifyAccounts :: BudgetAccounts -> CliM ()
-modifyAccounts a = CMS.modify $ \s@(CliState{budget = b}) -> s {budget = b {budgetAccounts = a}}
+saveBudget :: Budget -> CliM ()
+saveBudget b = do
+    bfp <- getBudgetDir
+    serialize (bfp </> "budget.yaml") b
 
 runAccountCmd :: (BudgetAccounts -> CliM a) -> CliM a
 runAccountCmd f = runWithBudget (f . budgetAccounts)
 
+runAccountCmdAndSave f = runWithBudget $ \b -> do
+  a <- f (budgetAccounts b)
+  saveBudget $ b {budgetAccounts = a}
+
 saveAccounts :: BudgetAccounts -> CliM ()
-saveAccounts accs = modifyAccounts accs >> saveBudget
+saveAccounts accs = getBudgetDir >>= flip serialize accs
+
+getBudget :: CliM Budget
+getBudget = getBudgetDir >>= deserialize . (</> "budget.yaml")
+
+getBudgetDir = CMS.gets mOpts >>= return . budgetFileDir
 
 printOut = liftIO . putStrLn

@@ -24,6 +24,9 @@ import YabCommon
 import Data.Budget
 import Data.Serialization
 import qualified Data.Map as DM
+import qualified System.Directory as SD
+
+import System.FilePath.Posix ((</>))
 
 printBudgetBalanced b = 
   case checkBudgetBalanced b of
