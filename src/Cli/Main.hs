@@ -66,7 +66,7 @@ instance Command Prog where
 
 instance Command AccountCommand where
   runCmd (AddAccount name amount) = do 
-    runAccountCmdAndSave $ return . addAccount name amount
+    runAccountCmdAndSave $ addAccount' name amount
     printOut $ "Added Account: " ++ name
     
   runCmd (RemoveAccount name) = do 
@@ -112,7 +112,7 @@ runProg :: IO ()
 runProg = getProgOpts >>= mainProg
 
 getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account
-getAccount name =  maybe (throwM $ NoSuchAccount name) return . DM.lookup name
+getAccount name =  maybe (throwM $ AccountNotExistsException name) return . DM.lookup name
 
 runWithBudget :: (Budget -> CliM a) -> CliM a
 runWithBudget f = getBudget >>= f
