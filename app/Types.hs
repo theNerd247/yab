@@ -13,7 +13,7 @@ Portability : POSIX
 
 -}
 
-module Cli.Types
+module Types
 (
   MainProg(..)
   ,MainOpts(..)

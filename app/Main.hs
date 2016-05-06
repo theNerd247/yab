@@ -12,18 +12,16 @@ Portability : POSIX
 
 -}
 
-module Cli.Main
-(
-  runProg
-)
+module Main
+
 where
 
 import YabCommon
 import Data.Budget
 import Data.Serialization
-import Cli.Types
-import Cli.Parser
-import Cli.Budget
+import Types
+import Parser
+import Budget
 
 import qualified Data.List as DL
 import qualified System.Directory as SD
@@ -46,16 +44,6 @@ instance Show BudgetExistsException where
 instance Exception BudgetExistsException
 
 type CliM = CMS.StateT CliState IO
-
-mainProg ops = do
-  CMS.evalStateT (runCmd (prog ops)) initState 
-  `catchAll`
-  printEAndExit
-  where
-    initState = CliState 
-      {
-       mOpts = mainOpts ops
-      }
 
 class Command a where
   runCmd :: a -> CliM ()
@@ -108,8 +96,15 @@ instance Command BudgetCommand where
 
   runCmd ListAccounts = runWithBudget printAccountList
 
-runProg :: IO ()
-runProg = getProgOpts >>= mainProg
+main = getProgOpts >>= \ops -> do
+  CMS.evalStateT (runCmd (prog ops)) (initState ops)
+  `catchAll`
+  printEAndExit
+  where
+    initState o = CliState 
+      {
+       mOpts = mainOpts o
+      }
 
 getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account
 getAccount name =  maybe (throwM $ AccountNotExistsException name) return . DM.lookup name

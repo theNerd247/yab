@@ -10,7 +10,7 @@ Portability : POSIX
 
 -}
 
-module Cli.Budget
+module Budget
 (
   printAccountStatus
   ,printBudgetBalanced
