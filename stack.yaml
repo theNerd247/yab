@@ -1,0 +1,8 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- '.'
+extra-deps:
+- hsshellscript-3.3.4
+- yaml-0.8.17.1
+resolver: lts-5.15

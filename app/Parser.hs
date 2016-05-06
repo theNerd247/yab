@@ -12,7 +12,7 @@ Portability : POSIX
 
 -}
 
-module Cli.Parser
+module Parser
 (
   getProgOpts
 )
@@ -21,7 +21,7 @@ where
 import YabCommon
 import Data.Budget
 import Data.Serialization
-import Cli.Types
+import Types
 import Control.Applicative
 
 import qualified Options.Applicative as OA
