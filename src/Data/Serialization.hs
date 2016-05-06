@@ -56,6 +56,7 @@ instance Serialize (DM.Map Name Account) where
   deserialize fpath = do
     af <- accountFiles
     as <- sequence (deserialize <$> af) 
+    liftIO . putStrLn $ "Deserize path: " ++ fpath
     return $ DM.fromList (zip af as)
     where
       accountFiles = (liftIO . SD.getDirectoryContents $ fpath </> "accounts")

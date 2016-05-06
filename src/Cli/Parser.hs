@@ -20,6 +20,7 @@ where
 
 import YabCommon
 import Data.Budget
+import Data.Serialization
 import Cli.Types
 import Control.Applicative
 
@@ -40,7 +41,7 @@ getProgOpts = liftIO $ OA.customExecParser prefs opts
       )
     prefs = OA.prefs $ OA.showHelpOnError
 
-cmd' n h ops = OA.command n $ OA.info ops (OA.progDesc h)
+cmd' n h ops = OA.command n $ OA.info ops (OA.fullDesc <> OA.progDesc h)
 
 instance Parseable MainProg where
   parse = MainProg <$> parse <*> parse
@@ -48,7 +49,7 @@ instance Parseable MainProg where
 instance Parseable MainOpts where
   parse = MainOpts <$> pBudgetFile
 
-pBudgetFile = OA.strOption $ 
+pBudgetFile = OA.strOption $
      OA.value "."
   <> OA.short 'b'
   <> OA.long "budget-path"
@@ -72,12 +73,11 @@ instance Parseable BudgetCommand where
 instance CommandGroup BudgetCommand where
   cmds = 
     [
-      cmd' "status" "get the overal status of the budget" (pure BudgetStatus)
-     ,cmd' "newpay" "adds a new paycheck to the accounts based on the given budget" $ NewPayCheck <$> parse
+      cmd' "status" "get the overal status of the budget" $ pure BudgetStatus
+     ,cmd' "newpay" "adds a new paycheck to the accounts" $ NewPayCheck <$> parse <*> parse
+     ,cmd' "ls" "list the accounts in the budget" $ pure ListAccounts 
+     ,cmd' "init" "initialize the budget directory" $ pure InitBudgetDir
     ]
-
-instance Parseable NewPaycheckOpts where
-  parse = NewPaycheckOpts <$> optional parse <*> optional parse
 
 instance Parseable AccountCommand where
   parse = parseCmds
@@ -85,23 +85,31 @@ instance Parseable AccountCommand where
 instance CommandGroup AccountCommand where
   cmds = 
     [
-      cmd' "add" "add a new account" $ AddAccount <$> parse
-     ,cmd' "rm" "remove an account" $ RemoveAccount <$> parse 
-     ,cmd' "merge" "merges two accounts" $ MergeAccounts <$> parse
-     ,cmd' "status" "the status of an account" $ AccountStatus <$> parse
+      cmd' "add" "add a new account" $ AddAccount <$> parseName <*> parse
+     ,cmd' "rm" "remove an account" $ RemoveAccount <$> parseName 
+     ,cmd' "merge" "merges two accounts into the first given" $ MergeAccounts <$> parseName <*> parseName
+     ,cmd' "status" "the status of an account" $ AccountStatus <$> parseName
+     ,cmd' "new-entry" "add a new entry to the account" $ NewAccountEntry <$> parseName <*> parse
+     ,cmd' "show" "show the account's entries" $ ShowEntries <$> parseName
     ]
 
-instance Parseable AddAccountOpts where
-  parse = AddAccountOpts <$> parse <*> parse
-
-instance Parseable MergeAccountsOpts where
-  parse = MergeAccountsOpts <$> parse <*> parse
-
 instance Parseable Amount where
-  parse = OA.argument OA.auto $ OA.help "A dollar amount as a floating point number"
+  parse = OA.argument OA.auto $ 
+    OA.help "A dollar amount as a floating point number"
+    <> OA.metavar "AMNT"
 
 instance Parseable Day where
-  parse = OA.argument OA.auto $ OA.help "A day in the format mm/dd/yy"
+  parse = OA.argument getDay $ 
+      OA.help "A day in the format mm/dd/yy"
+      <> OA.metavar "DAY"
+    where
+      -- use our parser to parse the date
+      getDay = OA.str >>= parseDate
 
-instance Parseable Name where
-  parse = OA.strArgument $ OA.help "the name of an account defined in the budget file."
+instance Parseable Entry where
+  parse = Entry <$> parse <*> desc <*> parse
+    where
+      desc = parseString "DESC" "The description of the entry"
+
+parseString meta h = OA.strArgument $ OA.help h <> OA.metavar meta
+parseName = parseString "NAME" "The name of the account"

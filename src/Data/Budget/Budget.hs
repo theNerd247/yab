@@ -20,12 +20,14 @@ module Data.Budget.Budget
   ,Rate(..)
   ,Account(..)
   ,BudgetAccounts(..)
-  ,NoSuchAccount(..)
+  ,AccountNotExistsException(..)
+  ,AccountExistsException(..)
   ,mergeAccountData
   ,checkBudgetBalanced
   ,checkAccounts
   ,checkAccount
   ,addAccount
+  ,addAccount'
   ,removeAccount
   ,mergeAccounts
   ,showAmount
@@ -67,12 +69,17 @@ data Budget = Budget
   }
   deriving (Generic,Typeable,Show,Read,Eq)
 
-data NoSuchAccount = NoSuchAccount Name deriving (Generic,Eq,Ord,Typeable)
+data AccountNotExistsException = AccountNotExistsException Name deriving (Generic,Eq,Ord,Typeable)
+data AccountExistsException = AccountExistsException Name deriving (Generic,Eq,Ord,Typeable)
 
-instance Show NoSuchAccount where
-  show (NoSuchAccount n) = "Account doesn't exist: " ++ n
+instance Show AccountNotExistsException where
+  show (AccountNotExistsException n) = "Account doesn't exist: " ++ n
 
-instance Exception NoSuchAccount
+instance Show AccountExistsException where
+  show (AccountExistsException n) = "Account: " ++ n ++ " already exists!"
+
+instance Exception AccountNotExistsException
+instance Exception AccountExistsException
 
 -- | Checks if a budget is balanced (its income is equal to its spending)
 checkBudgetBalanced :: Budget -> Bool
@@ -114,13 +121,18 @@ mergeAccountData a b = Account
 addAccount :: Name -> Amount -> BudgetAccounts -> BudgetAccounts
 addAccount n a = DM.insert n (Account a [])
 
--- | Remove an account from the budget. If the account does exist then NoSuchAccount is thrown
+addAccount' :: (MonadThrow m) => Name -> Amount -> BudgetAccounts -> m BudgetAccounts
+addAccount' n a b 
+  | DM.member n b = throwM $ AccountExistsException n
+  | otherwise = return $ addAccount n a b
+
+-- | Remove an account from the budget. If the account does exist then AccountNotExistsException is thrown
 removeAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m BudgetAccounts
 removeAccount n m
-  | DM.member n m == False = throwM $ NoSuchAccount n
+  | DM.member n m == False = throwM $ AccountNotExistsException n
   | otherwise = return $ DM.delete n m
 
--- | Merge two accounts. IF either account doesn't exist then NoSuchAccount is thrown.
+-- | Merge two accounts. IF either account doesn't exist then AccountNotExistsException is thrown.
 mergeAccounts :: (MonadThrow m) => Name -> Name -> BudgetAccounts -> m BudgetAccounts
 mergeAccounts na nb bas = do 
   accA <- checkFail (DM.lookup na bas) na
@@ -128,7 +140,7 @@ mergeAccounts na nb bas = do
   b <- removeAccount nb bas
   return $ DM.adjust (\_ -> mergeAccountData accA accB) na b
   where 
-    checkFail m n = maybe (throwM $ NoSuchAccount n) return m
+    checkFail m n = maybe (throwM $ AccountNotExistsException n) return m
 
 newDefaultPaycheck :: (MonadIO m) => Budget -> m Budget
 newDefaultPaycheck b@(Budget{
