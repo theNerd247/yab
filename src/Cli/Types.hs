@@ -55,5 +55,5 @@ data AccountCommand =
   | RemoveAccount Name
   | MergeAccounts Name Name
   | AccountStatus Name
-  | ShowEntries Name
   | NewAccountEntry Name Entry
+  | ShowEntries Name

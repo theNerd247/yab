@@ -85,12 +85,12 @@ instance Parseable AccountCommand where
 instance CommandGroup AccountCommand where
   cmds = 
     [
-      cmd' "add" "add a new account" $ AddAccount <$> parse <*> parse
-     ,cmd' "rm" "remove an account" $ RemoveAccount <$> parse 
-     ,cmd' "merge" "merges two accounts into the first given" $ MergeAccounts <$> parse <*> parse
-     ,cmd' "status" "the status of an account" $ AccountStatus <$> parse
-     ,cmd' "new-entry" "add a new entry to the account" $ NewAccountEntry <$> parse <*> parse
-     ,cmd' "show" "show the account entries" $ ShowEntries <$> parse
+      cmd' "add" "add a new account" $ AddAccount <$> parseName <*> parse
+     ,cmd' "rm" "remove an account" $ RemoveAccount <$> parseName 
+     ,cmd' "merge" "merges two accounts into the first given" $ MergeAccounts <$> parseName <*> parseName
+     ,cmd' "status" "the status of an account" $ AccountStatus <$> parseName
+     ,cmd' "new-entry" "add a new entry to the account" $ NewAccountEntry <$> parseName <*> parse
+     ,cmd' "show" "show the account's entries" $ ShowEntries <$> parseName
     ]
 
 instance Parseable Amount where
@@ -106,10 +106,10 @@ instance Parseable Day where
       -- use our parser to parse the date
       getDay = OA.str >>= parseDate
 
-instance Parseable Name where
-  parse = OA.strArgument $ 
-    OA.help "the name of an account defined in the budget file."
-    <> OA.metavar "NAME"
-
 instance Parseable Entry where
-  parse = Entry <$> parse <*> parse <*> parse
+  parse = Entry <$> parse <*> desc <*> parse
+    where
+      desc = parseString "DESC" "The description of the entry"
+
+parseString meta h = OA.strArgument $ OA.help h <> OA.metavar meta
+parseName = parseString "NAME" "The name of the account"
