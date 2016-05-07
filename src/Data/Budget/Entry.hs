@@ -15,6 +15,7 @@ module Data.Budget.Entry
 (
   Entry(..)
   ,Entries(..)
+  ,TransEntry(..)
   ,filterEntries
 )
 where
@@ -39,3 +40,5 @@ data Entry = Entry
 type Entries = [Entry]
 
 filterEntries = DL.filter
+
+newtype TransEntry = TransEntry Entry deriving (Show,Eq,Generic,Typeable)

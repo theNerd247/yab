@@ -23,11 +23,16 @@ import YabCommon
 import Data.Budget
 
 import qualified Control.Monad as CM
+import qualified Control.Applicative as CA
 import qualified Data.Csv as CSV
 import qualified GHC.Exts as GE (toList)
+import qualified Data.ByteString.Char8 as BS (null)
+import Control.Applicative ((<|>))
 
 import Data.ByteString.Lazy.Char8 (unpack,pack)
 import Data.Char (isSpace)
+import Data.Csv ((.!))
+import Data.Vector ((!?))
 
 -- | A parsing exception that contains the origin parser error
 data CSVParseException = CSVParseException String deriving (Show,Typeable)
@@ -41,15 +46,26 @@ instance CSV.ToField Day where
 instance CSV.FromField Day where
   parseField f = parseDate =<< (CSV.parseField f :: CSV.Parser String)
 
-parseDate :: (CM.MonadPlus m) => String -> m Day
-parseDate s = case parseTimes s of
-  [t] -> return t
-  otherwise -> CM.mzero
-  where
-    parseTimes s = [t | (t,r) <- readSTime True defaultTimeLocale "%x" s, all isSpace r]
-
 instance CSV.ToRecord Entry
 instance CSV.FromRecord Entry
+
+instance CSV.FromRecord TransEntry where
+  parseRecord v
+    | length v == 5 = mkTransEntry <$> 
+        v .! 0
+        <*> v .! 2
+        <*> (parseDebCred v)
+    | otherwise = CM.mzero
+    where
+      mkTransEntry a b c = TransEntry $ Entry a b c
+      parseDebCred v = maybe CM.mzero id $ do
+        d <- v !? 3
+        c <- v !? 4
+        parseField d <|> (mkc $ parseField c)
+      parseField f
+          | BS.null f = CM.mzero
+          | otherwise = return $ CSV.parseField f
+      mkc = fmap $ fmap ((-1)*)
 
 -- | Our custom CSV options 
 csvEncodeOptions = CSV.defaultEncodeOptions 
@@ -57,6 +73,23 @@ csvEncodeOptions = CSV.defaultEncodeOptions
   -- dont quote anything
   CSV.encQuoting = CSV.QuoteNone
   }
+
+dayFormats = [
+  "%"++u++"m"
+  ++s++"%"++u++"d"
+  ++s++"%"++y
+  -- note: y must be parsed before Y
+  | u <- ["","_","0","-"], y <- ["y","Y"], s <- ["/","-"]
+  ]
+
+
+parseDate :: (CM.MonadPlus m) => String -> m Day
+parseDate s = case parseTimes s of
+  [] -> CM.mzero
+  (x:xs) -> return x
+  where
+    parseTimes s = mconcat $ parseFormat <$> dayFormats <*> pure s
+    parseFormat f s = [t | (t,r) <- readSTime True defaultTimeLocale f s, all isSpace r]
 
 -- | saves a csv compatable type to a file
 saveCSVFile :: (MonadIO m, CSV.ToRecord a) => FilePath -> [a] -> m ()
@@ -71,5 +104,5 @@ loadCSVFile f = do
     -- | convert the result from a Vector to a []
     mklist = return . GE.toList
     -- | or convert to a SomeException
-    mkerror s = throwM . CSVParseException $
-      "Parser error in file: " ++ f ++ "\n" ++ " on line containing: " ++ (lines s !! 1)
+    mkerror s = throwM . CSVParseException $ s
+      {-"Parser error in file: " ++ f ++ "\n" ++ " on line containing: " ++ s -- (lines s !! 1)-}
