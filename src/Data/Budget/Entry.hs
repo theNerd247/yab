@@ -41,4 +41,4 @@ type Entries = [Entry]
 
 filterEntries = DL.filter
 
-newtype TransEntry = TransEntry Entry deriving (Show,Eq,Generic,Typeable)
+newtype TransEntry = TransEntry {getEntry :: Entry} deriving (Show,Eq,Generic,Typeable)
