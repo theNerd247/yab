@@ -18,7 +18,6 @@ module Data.Serialization.Csv
 )
 where
 
-
 import YabCommon
 import Data.Budget
 
@@ -48,24 +47,6 @@ instance CSV.FromField Day where
 
 instance CSV.ToRecord Entry
 instance CSV.FromRecord Entry
-
-instance CSV.FromRecord TransEntry where
-  parseRecord v
-    | length v == 5 = mkTransEntry <$> 
-        v .! 0
-        <*> v .! 2
-        <*> (parseDebCred v)
-    | otherwise = CM.mzero
-    where
-      mkTransEntry a b c = TransEntry $ Entry a b c
-      parseDebCred v = maybe CM.mzero id $ do
-        d <- v !? 3
-        c <- v !? 4
-        parseField d <|> (mkc $ parseField c)
-      parseField f
-          | BS.null f = CM.mzero
-          | otherwise = return $ CSV.parseField f
-      mkc = fmap $ fmap ((-1)*)
 
 -- | Our custom CSV options 
 csvEncodeOptions = CSV.defaultEncodeOptions 

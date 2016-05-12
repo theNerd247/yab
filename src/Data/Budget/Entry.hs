@@ -15,7 +15,6 @@ module Data.Budget.Entry
 (
   Entry(..)
   ,Entries(..)
-  ,TransEntry(..)
   ,filterEntries
 )
 where
@@ -24,6 +23,7 @@ import YabCommon
 
 import qualified Data.List as DL
 import qualified Data.Map.Lazy as DML
+import qualified Data.Map as DM
 
 -- | A single entry in an account file
 data Entry = Entry
@@ -41,4 +41,4 @@ type Entries = [Entry]
 
 filterEntries = DL.filter
 
-newtype TransEntry = TransEntry {getEntry :: Entry} deriving (Show,Eq,Generic,Typeable)
+
