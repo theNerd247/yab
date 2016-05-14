@@ -91,6 +91,8 @@ instance CommandGroup AccountCommand where
      ,cmd' "status" "the status of an account" $ AccountStatus <$> parseName
      ,cmd' "new-entry" "add a new entry to the account" $ NewAccountEntry <$> parseName <*> parse
      ,cmd' "show" "show the account's entries" $ ShowEntries <$> parseName
+     ,cmd' "sort" "Sort entries in given bank transaction file to respective accounts" 
+       $ SortTrans <$> parseString "FILEPATH" "File path to csv bank transaction file"
     ]
 
 instance Parseable Amount where

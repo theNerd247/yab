@@ -57,3 +57,4 @@ data AccountCommand =
   | AccountStatus Name
   | NewAccountEntry Name Entry
   | ShowEntries Name
+  | SortTrans FilePath

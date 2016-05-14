@@ -17,6 +17,7 @@ module YabCommon
   ,module Data.Typeable
   ,module GHC.Generics
   ,module Data.Time
+  ,TermPrint(..)
   ,today
 )
 where

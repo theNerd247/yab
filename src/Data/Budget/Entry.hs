@@ -40,5 +40,3 @@ data Entry = Entry
 type Entries = [Entry]
 
 filterEntries = DL.filter
-
-

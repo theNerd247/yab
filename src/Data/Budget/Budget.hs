@@ -36,6 +36,8 @@ module Data.Budget.Budget
   ,budgetBalance
   ,findMinPayOff
   ,newPaycheck
+  ,updateBudgetAccounts
+  ,updateEntries
 )
 where
 
@@ -117,6 +119,17 @@ mergeAccountData a b = Account
    accountAmount = accountAmount a + accountAmount b
   ,accountEntries = DL.union (accountEntries a) (accountEntries b)
   }
+
+-- | updates the entries in the given budget accounts using the corresponding
+-- entries in the given map. If no account name matches then the original budget
+-- accounts is returned
+updateEntries :: DM.Map Name Entries -> BudgetAccounts -> BudgetAccounts
+updateEntries entryMap bas = DM.unionWith unionEntries bas entryMap
+  where
+    unionEntries a e = a{accountEntries = DL.union (accountEntries a) e}
+
+updateBudgetAccounts :: (BudgetAccounts -> BudgetAccounts) -> Budget -> Budget
+updateBudgetAccounts f b = b{budgetAccounts = f (budgetAccounts b)}
 
 addAccount :: Name -> Amount -> BudgetAccounts -> BudgetAccounts
 addAccount n a = DM.insert n (Account a [])

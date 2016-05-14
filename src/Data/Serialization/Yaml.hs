@@ -49,8 +49,7 @@ writeYamlFile f = handleAll printEAndExit . liftIO . YAML.encodeFile f
 instance YAML.FromJSON Budget
 
 -- TODO: fix this quick hack as per issue #290 on github.com/bos/aeson
-instance YAML.ToJSON Budget where
-  toJSON = DAT.genericToJSON DAT.defaultOptions
+instance YAML.ToJSON Budget
 
 instance YAML.ToJSON Account where
   toJSON = YAML.toJSON . accountAmount

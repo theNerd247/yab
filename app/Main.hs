@@ -77,6 +77,10 @@ instance Command AccountCommand where
         mkEntries a = a {accountEntries = apnd entry . accountEntries $ a}
         apnd a l = l ++ [a]
 
+  runCmd (SortTrans fpath) = runWithBudget $ \budget -> do
+    fp <- getBudgetDir
+    sortTransactions fpath fp budget
+
 instance Command BudgetCommand where
   runCmd BudgetStatus = runWithBudget $ \b -> printBudgetBalanced b >> printAccountStatuses b
 

@@ -52,6 +52,7 @@ executable yab
     ,filepath
     ,directory
     ,optparse-applicative
+    ,pretty
 
   default-language:    Haskell2010
 
