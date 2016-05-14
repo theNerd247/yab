@@ -1,5 +1,6 @@
 {-#LANGUAGE DeriveGeneric #-}
 {-#LANGUAGE FlexibleInstances #-}
+
 {-|
 Module      : Name
 Description : Contains API for sorting data from navy federal CSV files to Account files
@@ -15,11 +16,13 @@ module AccountSort
 (
 TransEntry(..)
 ,DescMap(..)
+,EntriesMap(..)
 ,SortedEntries(..)
-,mapTransactionsFromFile
 ,mapTransactions
 ,getWordCount
 ,getTransEntryName
+,toEntriesMap
+,updateEntries
 )
 where
 
@@ -39,6 +42,7 @@ import qualified Control.Monad as CM
 import qualified Control.Applicative as CA
 import qualified Data.ByteString.Char8 as BS (null)
 import qualified Data.Yaml as YAML
+import qualified Data.Monoid as DMO
 
 newtype TransEntry = TransEntry {getTransEntry :: Entry} deriving (Show,Eq,Generic,Typeable)
 
@@ -46,17 +50,22 @@ type Keywords = [String]
 
 type DescMap = DM.Map Name Keywords
 
+type EntriesMap = DM.Map Name Entries
+
 data SortedEntries = SortedEntries 
   {
-    sortedEntries :: DM.Map Name Entries
+    sortedEntries :: EntriesMap
   ,nonSortedEntries :: Entries
   }
 
-instance TermPrint SortedEntries where
-  printTerm s = 
-    printTerm (sortedEntries s) 
-    ++ "\n " 
-    ++ (printTerm DM.singleton "Other" $ nonSortedEntries s)
+data DescMapNameException = DescMapNameException FilePath [Name] deriving (Generic,Typeable)
+
+instance Show DescMapNameException where
+  show (DescMapNameException fp ns) = 
+    "Accounts do not exist in transaction map file at: " ++ fp
+    ++ (mconcat $ DL.intersperse "\n  " ns)
+
+instance Exception DescMapNameException
 
 instance CSV.FromRecord TransEntry where
   parseRecord v
@@ -76,17 +85,11 @@ instance CSV.FromRecord TransEntry where
           | otherwise = return $ CSV.parseField f
       mkc = fmap $ fmap ((-1)*)
 
-mapTransactionsFromFile :: (MonadIO m) => FilePath -> FilePath -> m SortedEntries
-mapTransactionsFromFile tFPath descMapFPath = do
-  transEntries <- liftIO $ loadCSVFile tFPath
-  descMap <- liftIO $ readYamlFile descMapFPath
-  return $ mapTransactions (getTransEntry <$> transEntries) descMap
-
 mapTransactions :: Entries -> DescMap -> SortedEntries
 mapTransactions es dmap = SortedEntries 
   {
-    sortedEntries = DM.mapKeys fromJust . DM.filter isJust $ entriesSorted
-    nonSortedEntries = fmap snd . DM.toList . DM.filter isNothing $ entriesSorted
+    sortedEntries = DM.mapKeys fromJust . DM.filterWithKey (\k _ -> isJust k) $ entriesSorted
+  , nonSortedEntries = mconcat . fmap snd . DM.toList . DM.filterWithKey (\k _ -> isNothing k) $ entriesSorted
   }
   where
     entriesSorted = foldr mkmap DM.empty [(getName e dmap,[e]) | e <- es]
@@ -104,3 +107,15 @@ getWordCount :: String -> Keywords -> Int
 getWordCount d = sum . fmap getKeywordCount
   where 
     getKeywordCount keyword = length $ DL.intersect (words keyword) (words d)
+
+toEntriesMap :: BudgetAccounts -> EntriesMap
+toEntriesMap = fmap accountEntries
+
+-- | updates the entries in the given budget accounts using the corresponding
+-- entries in the given map. If no account name matches then the original budget
+-- accounts is returned
+updateEntries :: EntriesMap -> BudgetAccounts -> BudgetAccounts
+updateEntries entryMap bas = DM.mapWithKey (\k a -> unionEntries a (DM.lookup k entryMap)) bas
+  where
+    unionEntries a Nothing = a
+    unionEntries a (Just e) = a{accountEntries = DL.union (accountEntries a) e}

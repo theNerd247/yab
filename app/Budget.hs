@@ -25,6 +25,8 @@ import YabCommon
 import Data.Budget
 import Data.Serialization
 import AccountSort
+import Pretty
+
 import qualified Data.Map as DM
 import qualified Data.List as DL
 import qualified System.Directory as SD
@@ -55,42 +57,64 @@ printAccountEntries = liftIO . mapM_ (putStrLn . printEntry) . accountEntries
   where
     printEntry (Entry da de a) = (show da) ++ " " ++ (show $ take 40 de) ++ " " ++ (showAmount a)
 
-sortTransactions :: (MonadIO m) => FilePath -> FilePath -> Budget -> m ()
+sortTransactions :: (MonadCatch m, MonadIO m) => FilePath -> FilePath -> Budget -> m ()
 sortTransactions tfpath bdir b = do
-  dm <- mapTransactionsFromFile tfpath (bdir </> "trans.yaml")
+  transEntries <- liftIO $ loadCSVFile tfpath
+  descMap <- liftIO $ readYamlFile (bdir </> "trans.yaml")
+  checkValidMap descMap (budgetAccounts b)
+  dm <- return $ mapTransactions (getTransEntry <$> transEntries) descMap
   liftIO $ putStrLn "Here's the sorted entries" 
-  printSortedEntries dm
+  liftIO $ putStrLn . prettyShow $ dm
   runUserInput "Do you want to save these results? (y/n)" $
     [
        ("y",saveSortedEntries bdir dm b)
       ,("n",return ())
     ]
+  where
 
-saveSortedEntries :: (MonadIO m) => FilePath -> SortedEntries -> Budget -> m ()
-saveSortedEntries budgetDir sortedEntries b = do
+saveSortedEntries :: (MonadCatch m, MonadIO m) => FilePath -> SortedEntries -> Budget -> m ()
+saveSortedEntries budgetDir s b = do
   -- save Nothing entries to /tmp
   ofp <- otherFP
-  writeCSVFile ofp otherEntries
-  liftIO $ putStrLn "Saved non-sorted entries in: " ++ ofp
-  serialize (budgetDir </> "budget.yaml") $ updateBudgetAccounts (updateEntries sortedEntryMap) b
-  handleDuplicateEntries
+  saveCSVFile ofp $ nonSortedEntries s
+  liftIO $ putStrLn $ "Saved non-sorted entries in: " ++ ofp
+  finalEntries <- handleDuplicateEntries originalEntries (sortedEntries s)
+  serialize (budgetDir </> "budget.yaml") $ updateBudgetAccountsWith (updateEntries finalEntries) b
   where
-    otherEntries = DM.findWithDefault [] Nothing sortedEntries
     otherFP = today >>= \td -> return $ budgetDir </> ("unsorted-" ++ (show td) ++ ".csv")
-    sortedEntryMap = DM.mapKeys fromMaybe $ DM.delete Nothing sortedEntries
+    originalEntries = toEntriesMap $ budgetAccounts b
 
-handleDuplicateEntries :: (MonadIO m) => DM.Map Name Entries -> BudgetAccounts -> m ()
-handleDuplicateEntries sorted ba
-  | DM.empty duplicates == True = return ()
+checkValidMap :: (MonadThrow m) => DescMap -> BudgetAccounts -> m ()
+checkValidMap m bm 
+  | b = return ()
+  | otherwise = throwM $ DescMapNameException 
+  where
+    b = DMO.getAll . mconcat $ (\k -> DMO.All $ DM.member k bm) <$> (DM.keys m) 
+
+handleDuplicateEntries :: (MonadIO m) => EntriesMap -> EntriesMap -> m EntriesMap
+handleDuplicateEntries o s
+  | DM.null duplicates = return nonDuplicatedEntries
   | otherwise = do
-    print
+    liftIO $ putStrLn "The following entires would be duplicated: "
+    liftIO . putStrLn $ prettyShow duplicates
+    runUserInput "Would you like to save the duplicate entries? (y/n)" $
+      [
+        ("y",return $ DM.unionWith (++) o s)
+      , ("n",return $ nonDuplicatedEntries)
+      ]
+    where
+      nonDuplicatedEntries = DM.unionWith DL.union o s
+      duplicates = fst $ DL.mapAccumL (\newS k -> (DM.update (checkDuplicates k) k newS, k)) s (DM.keys s)
+      checkDuplicates k se = maybe Nothing (\oes -> toNonEmpty $ DL.intersect oes se) $ (DM.lookup k o)
+      toNonEmpty [] = Nothing
+      toNonEmpty l = Just l
 
-runUserInput :: (MonadIO m) => String -> [(String,m ())] -> m ()
+runUserInput :: (MonadIO m) => String -> [(String, m a)] -> m a
 runUserInput prompt acts = do
   liftIO $ putStrLn prompt
   ui <- liftIO getLine
   runUserAct ui acts
     where
-      runUserAct _ [] = return ()
+      runUserAct _ [] = fail "No actions provided for runUserInput...blame the programmer"
       runUserAct i acts = maybe defaultAct snd $ DL.find ((i ==) . fst) acts
       defaultAct = runUserInput prompt acts
