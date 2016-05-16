@@ -37,7 +37,7 @@ library
     ,Data.Serialization.Yaml
     ,Data.Serialization.Errors
     ,Data.Serialization.Csv
-    ,AccountSort
+    ,Yab.AccountSort
     ,YabCommon
 
 executable yab

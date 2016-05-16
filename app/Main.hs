@@ -22,6 +22,7 @@ import Data.Serialization
 import Types
 import Parser
 import Budget
+import AccountSort
 
 import qualified Data.List as DL
 import qualified System.Directory as SD

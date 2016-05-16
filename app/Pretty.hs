@@ -21,7 +21,7 @@ where
 
 import YabCommon
 import Data.Budget
-import AccountSort
+import Yab.AccountSort
 
 import qualified Text.PrettyPrint.HughesPJClass as TPH
 import qualified Data.Map as DM

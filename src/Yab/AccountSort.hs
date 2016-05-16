@@ -12,7 +12,7 @@ Portability : POSIX
 
 -}
 
-module AccountSort
+module Yab.AccountSort
 (
 TransEntry(..)
 ,DescMap(..)
@@ -23,6 +23,7 @@ TransEntry(..)
 ,getTransEntryName
 ,toEntriesMap
 ,updateEntries
+,getMatchingKeys
 )
 where
 
@@ -42,7 +43,6 @@ import qualified Control.Monad as CM
 import qualified Control.Applicative as CA
 import qualified Data.ByteString.Char8 as BS (null)
 import qualified Data.Yaml as YAML
-import qualified Data.Monoid as DMO
 
 newtype TransEntry = TransEntry {getTransEntry :: Entry} deriving (Show,Eq,Generic,Typeable)
 
@@ -57,15 +57,6 @@ data SortedEntries = SortedEntries
     sortedEntries :: EntriesMap
   ,nonSortedEntries :: Entries
   }
-
-data DescMapNameException = DescMapNameException FilePath [Name] deriving (Generic,Typeable)
-
-instance Show DescMapNameException where
-  show (DescMapNameException fp ns) = 
-    "Accounts do not exist in transaction map file at: " ++ fp
-    ++ (mconcat $ DL.intersperse "\n  " ns)
-
-instance Exception DescMapNameException
 
 instance CSV.FromRecord TransEntry where
   parseRecord v
@@ -119,3 +110,7 @@ updateEntries entryMap bas = DM.mapWithKey (\k a -> unionEntries a (DM.lookup k 
   where
     unionEntries a Nothing = a
     unionEntries a (Just e) = a{accountEntries = DL.union (accountEntries a) e}
+
+-- | returns all matching keys between two maps
+getMatchingKeys :: (Eq k) => DM.Map k a -> DM.Map k b -> [k]
+getMatchingKeys m1 m2 = DL.intersect (DM.keys m1) (DM.keys m2)
