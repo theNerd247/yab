@@ -75,6 +75,7 @@ instance CommandGroup BudgetCommand where
     [
       cmd' "status" "get the overal status of the budget" $ pure BudgetStatus
      ,cmd' "newpay" "adds a new paycheck to the accounts" $ NewPayCheck <$> parse <*> parse
+     ,cmd' "from-newpay" "Creates new paycheck entries based on entries in 'newpay' account" $ pure NewPayCheckAcc
      ,cmd' "ls" "list the accounts in the budget" $ pure ListAccounts 
      ,cmd' "init" "initialize the budget directory" $ pure InitBudgetDir
     ]
