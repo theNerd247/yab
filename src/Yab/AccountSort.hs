@@ -43,6 +43,7 @@ import qualified Control.Monad as CM
 import qualified Control.Applicative as CA
 import qualified Data.ByteString.Char8 as BS (null)
 import qualified Data.Yaml as YAML
+import qualified Data.Bool as DB
 
 newtype TransEntry = TransEntry {getTransEntry :: Entry} deriving (Show,Eq,Generic,Typeable)
 
@@ -97,7 +98,7 @@ getTransEntryName d = fst . DM.foldrWithKey getMaxKey (Nothing,0) . fmap (getWor
 getWordCount :: String -> Keywords -> Int
 getWordCount d = sum . fmap getKeywordCount
   where 
-    getKeywordCount keyword = length $ DL.intersect (words keyword) (words d)
+    getKeywordCount keyword = DB.bool 0 1 $ DL.isInfixOf keyword d
 
 toEntriesMap :: BudgetAccounts -> EntriesMap
 toEntriesMap = fmap accountEntries
