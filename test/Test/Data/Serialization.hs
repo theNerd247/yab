@@ -1,23 +1,17 @@
 {-|
 Module      : Name
-Description : QuickCheck serialization properties for Data.Serialization
-Copyright   : (c) Some Guy, 2013
-License     : GPL-3
+Description : 
+Copyright   :
+License     : GPL-2
 Maintainer  : sample@email.com
 Stability   : experimental
 Portability : POSIX
 
- Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod
-tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At
-vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren,
-no sea takimata sanctus est Lorem ipsum dolor sit amet.
-
 -}
 
-module Test.Serialization
+module Test.Data.Serialization
 (
   prop_SerializeBudget
-  ,prop_CSVField
   ,prop_Serialize
   ,mktempDirs
 )
@@ -42,15 +36,6 @@ prop_Serialize fp d = monadicIO $ do
 
 prop_SerializeBudget :: FilePath -> Budget -> Property
 prop_SerializeBudget = prop_Serialize . (</> "budget.yaml")
-
-prop_CSVField :: (Eq a, CSV.FromField a, CSV.ToField a) => a -> Bool
-prop_CSVField d = 
-  case CSV.runParser $ da d of
-    Left _ -> False
-    Right dd -> dd == d
-  where
-    da :: (CSV.FromField a, CSV.ToField a) => a -> CSV.Parser a
-    da = CSV.parseField . CSV.toField
 
 -- | creates a temp budget directory structure to store serialization test data
 mktempDirs :: (MonadIO m) => m String

@@ -11,7 +11,7 @@ Portability : POSIX
 
 -}
 
-module Test.Budget
+module Test.Data.Budget.Budget
 (
 prop_AddAccount
 ,prop_RemoveAccount

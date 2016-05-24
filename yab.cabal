@@ -59,7 +59,7 @@ executable yab
 test-suite yab-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  main-is:             Test.hs
+  main-is:             Main.hs
   build-depends:       
      base
     ,QuickCheck
