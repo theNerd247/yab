@@ -7,6 +7,7 @@ import Test.QuickCheck.Monadic
 import Test.Data.Budget.Budget
 import Test.Data.Serialization
 import Test.Data.Serialization.Csv
+import Test.Yab.AccountSort
 
 import Data.Budget
 import Data.Serialization
@@ -26,6 +27,7 @@ tests d = [testGroup n ts | (n,ts) <- [
   ("Serialize",serializeTests d)
   ,("Budget",budgetTests)
   ,("CSV",csvTests)
+  ,("AccountSort",accountSortTests)
   ]]
 
 serializeTests :: FilePath -> [Test]
@@ -46,4 +48,9 @@ budgetTests = [
   ,testProperty "remove_account" prop_RemoveAccount
   ,testProperty "merge_account" prop_MergeAccount
   ,testProperty "new_paycheck" prop_Newpaycheck
+  ]
+
+accountSortTests :: [Test]
+accountSortTests = [
+  testProperty "csv_TransEntry" prop_csvTransEntry
   ]
