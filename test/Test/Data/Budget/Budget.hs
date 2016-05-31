@@ -98,10 +98,9 @@ genAccName b = do
   i <- choose (0,(DM.size b - 1))
   return . fst $ DM.elemAt i b
 
-prop_Newpaycheck :: Amount -> DT.Day -> Budget -> Property
+prop_Newpaycheck :: Amount -> DT.Day -> Budget -> Bool
 prop_Newpaycheck am d b = 
-  label ("Newpaycheck: " ++ (show np))
-  $ DMo.getAll $ foldMap checkAccounts (budgetAccounts np)
+  DMo.getAll $ foldMap checkAccounts (budgetAccounts np)
   where 
     np = newPaycheck am d b
     bi = budgetIncome b

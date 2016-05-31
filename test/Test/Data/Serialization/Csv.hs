@@ -37,7 +37,7 @@ instance Arbitrary DayString where
 
 -- | Test conversion of data type to CSV field
 prop_CSVField :: (Eq a, CSV.FromField a, CSV.ToField a) => a -> Bool
-prop_CSVField d = 
+prop_CSVField d =
   case CSV.runParser $ da d of
     Left _ -> False
     Right dd -> dd == d
@@ -46,7 +46,7 @@ prop_CSVField d =
     da = CSV.parseField . CSV.toField
 
 prop_invalidDate :: String -> Property
-prop_invalidDate s = collect s $ 
+prop_invalidDate s = 
   forAll (getDayString <$> (arbitrary :: Gen DayString)) $ \ds ->
       (ds /= s) ==> (maybeToBool False $ parseDate s)
 
