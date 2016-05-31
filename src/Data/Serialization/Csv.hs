@@ -16,6 +16,7 @@ module Data.Serialization.Csv
   ,CSVParseException(..)
   ,parseDate
   ,dayFormats
+  ,csvEncodeOptions
 )
 where
 

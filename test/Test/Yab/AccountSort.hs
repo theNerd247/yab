@@ -17,6 +17,7 @@ module Test.Yab.AccountSort
 where
 
 import Data.Budget.Entry
+import Data.Serialization.Csv (csvEncodeOptions)
 import Test.QuickCheck
 import Test.LoremWords
 import Test.Data.Budget.Budget
@@ -35,13 +36,8 @@ data SampleCSVLine = SampleCSVLine
      sampleLineDay :: DT.Day 
     ,sampleLineChk :: Int 
     ,sampleLineDesc :: String 
-    ,sampleAmount :: SampleCredDeb 
+    ,sampleAmount :: Double 
   }
-
-data SampleCredDeb = SampleDeb Double | SampleCred Double
-
-instance Arbitrary SampleCredDeb where
-  arbitrary = arbitrary >>= \d -> elements $ [SampleDeb,SampleCred . negate] <*> [d]
 
 instance Arbitrary SampleCSVLine where
   arbitrary = SampleCSVLine <$> 
@@ -52,29 +48,30 @@ instance Arbitrary SampleCSVLine where
 
 instance Show SampleCSVLine where
   show sampleLine = 
-    show (sampleLineDay sampleLine)
+    DT.formatTime DT.defaultTimeLocale "%m/%d/%Y" (sampleLineDay sampleLine)
     ++ "," ++ show (sampleLineChk sampleLine)
     ++ "," ++ show (sampleLineDesc sampleLine)
     ++ "," ++ showSampleAmnt (sampleAmount sampleLine)
     where
-      showSampleAmnt (SampleDeb a) = "\"\"," ++ (show a)
-      showSampleAmnt (SampleCred a) = (show a) ++ ",\"\""
-
-instance Show SampleCredDeb where
-  show (SampleDeb a) = show a
-  show (SampleCred a) = show a
+      showSampleAmnt a
+        | a < 0 = "\"\"," ++ (show . negate $ a)
+        | otherwise = (show a) ++ ",\"\""
 
 instance CSV.ToRecord SampleCSVLine where
   toRecord sampleLine = CSV.record [BS.pack $ show sampleLine]
 
-prop_csvTransEntry :: SampleCSVLine -> Bool
+prop_csvTransEntry :: SampleCSVLine -> Property
 prop_csvTransEntry sampleLine = 
-  either (const False) (sampleTransEntry ==) parsedLine
+    counterexample failMsg
+  $ either (const False) (sampleTransEntry ==) parsedLine
   where
     sampleTransEntry = TransEntry $ Entry day desc amnt
     day = sampleLineDay sampleLine
     desc = sampleLineDesc sampleLine
-    amnt = case sampleAmount sampleLine of
-             SampleDeb a -> a
-             SampleCred a -> a
-    parsedLine = fmap DV.head $ CSV.decode CSV.NoHeader $ CSV.encode [sampleLine]
+    amnt = sampleAmount sampleLine
+    parsedLine = fmap DV.head $ CSV.decode CSV.NoHeader encodedLine
+    encodedLine = CSV.encodeWith csvEncodeOptions [sampleLine]
+    failMsg =
+        ("sampleLine: " ++ (show sampleLine)) 
+      ++ "\n" ++ ("sampleTransEntry: " ++ (show sampleTransEntry))
+      ++ "\n" ++ ("parsedLine: " ++ (show parsedLine))

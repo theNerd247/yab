@@ -69,8 +69,8 @@ instance CSV.FromRecord TransEntry where
     where
       mkTransEntry a b c = TransEntry $ Entry a b c
       parseDebCred v = maybe CM.mzero id $ do
-        d <- v !? 4
-        c <- v !? 3
+        d <- v !? 3
+        c <- v !? 4
         parseField d <|> (mkc $ parseField c)
       parseField f
           | BS.null f = CM.mzero
