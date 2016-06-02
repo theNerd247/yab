@@ -6,3 +6,6 @@ extra-deps:
 - hsshellscript-3.3.4
 - yaml-0.8.17.1
 resolver: lts-5.15
+docker:
+  enable: false
+  repo: fcpo/stack-build
