@@ -32,4 +32,4 @@ then
 fi
 
 # Get the list of packages from the stack.yaml file
-PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
+export PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
