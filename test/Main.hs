@@ -47,6 +47,8 @@ budgetTests = [
   ,testProperty "remove_account" prop_RemoveAccount
   ,testProperty "merge_account" prop_MergeAccount
   ,testProperty "new_paycheck" prop_Newpaycheck
+  ,testProperty "check_budgetBalanced" prop_CheckBudgetBalanced
+  ,testProperty "check_budgetBalance" prop_BudgetBalance
   ]
 
 accountSortTests :: [TestTree]

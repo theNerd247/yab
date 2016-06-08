@@ -17,6 +17,8 @@ prop_AddAccount
 ,prop_RemoveAccount
 ,prop_MergeAccount
 ,prop_Newpaycheck
+,prop_CheckBudgetBalanced
+,prop_BudgetBalance
 )
 where
 
@@ -107,3 +109,24 @@ prop_Newpaycheck am d b =
     checkAccounts a = checkEntry ((accountAmount a) * (am / bi)) . last . accountEntries $ a 
     checkEntry eam entry = DMo.All $ (testEntry eam) == entry
     testEntry a = Entry{entryDate = d, entryDesc = "new paycheck", entryAmount = a}
+
+prop_CheckBudgetBalanced :: Property
+prop_CheckBudgetBalanced = conjoin $
+  [
+    \b -> balanced b ==> checkBudgetBalanced b == True
+    ,\b -> not (balanced b) ==> checkBudgetBalanced b == False
+  ]
+  where
+    balanced b = ((budgetIncome b) - (sum $ accountAmount <$> (budgetAccounts b))) /= 0
+
+-- | Is the budgetBalance function accurate?
+prop_BudgetBalance :: Property
+prop_BudgetBalance = conjoin $ 
+  [
+    \b -> emptyBudget b ==> budgetBalance b == 0
+  , \b -> not (emptyBudget b) ==> (budgetBalance b) + (summedAccounts b) == (budgetIncome b)
+  , \b -> not (emptyBudget b) ==> (budgetIncome b) - (budgetBalance b) == (summedAccounts b)
+  ]
+    where
+      emptyBudget = not . DM.null . budgetAccounts
+      summedAccounts b = sum (accountAmount <$> budgetAccounts b)
