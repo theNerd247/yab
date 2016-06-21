@@ -112,7 +112,8 @@ budgetTests = [
   ,testProperty "check_budget_balanced" prop_CheckBudgetBalanced
   ,testProperty "check_budget_unbalanced" prop_CheckBudgetUnBalanced
   ,testProperty "budget_balance_empty" prop_BudgetBalanceEmpty
-  {-,testProperty "budget_balance_nonempty" prop_BudgetBalanceNonEmpty-}
+  ,testProperty "budget_balance_nonempty" prop_BudgetBalanceNonEmpty
+  ,testProperty "testSumEq" testSumEq
   ]
 
 posNum :: (Num a, Ord a, Arbitrary a) => Gen a
@@ -167,7 +168,17 @@ prop_BudgetBalanceEmpty = (==0) . budgetBalance . getEmptyBudget
 
 prop_BudgetBalanceNonEmpty :: Budget -> Property
 prop_BudgetBalanceNonEmpty b = 
-  not (emptyBudget b) ==> (budgetBalance b) + (summedAccounts b) == (budgetIncome b) 
-    where
-      emptyBudget = not . DM.null . budgetAccounts
-      summedAccounts b = sum (accountAmount <$> budgetAccounts b)
+  nonEmptyBudget b ==> 
+    counterexample (
+      "Balance: " ++ (show bal) 
+      ++ "\n" ++ "SummedAccounts: " ++ (show summedAccounts)
+      ++ "\n" ++ "Diff: " ++ (show $ bal + summedAccounts - budgetIncome b)
+      )
+    $ (bal + summedAccounts) == (budgetIncome b) 
+  where
+    bal = budgetBalance b
+    nonEmptyBudget = not . DM.null . budgetAccounts
+    summedAccounts = sum $ accountAmount <$> (budgetAccounts b)
+
+testSumEq :: Double -> Double -> Bool
+testSumEq a b = (a - b) + b == a
