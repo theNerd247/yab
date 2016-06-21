@@ -113,7 +113,6 @@ budgetTests = [
   ,testProperty "check_budget_unbalanced" prop_CheckBudgetUnBalanced
   ,testProperty "budget_balance_empty" prop_BudgetBalanceEmpty
   ,testProperty "budget_balance_nonempty" prop_BudgetBalanceNonEmpty
-  ,testProperty "testSumEq" testSumEq
   ]
 
 posNum :: (Num a, Ord a, Arbitrary a) => Gen a
@@ -174,11 +173,13 @@ prop_BudgetBalanceNonEmpty b =
       ++ "\n" ++ "SummedAccounts: " ++ (show summedAccounts)
       ++ "\n" ++ "Diff: " ++ (show $ bal + summedAccounts - budgetIncome b)
       )
-    $ (bal + summedAccounts) == (budgetIncome b) 
+    -- Run our equality test with 11 decimal precision. Anything beyond that may
+    -- not be necessary?
+    $ floatEq (bal + summedAccounts) (budgetIncome b) 1e-11
   where
     bal = budgetBalance b
     nonEmptyBudget = not . DM.null . budgetAccounts
     summedAccounts = sum $ accountAmount <$> (budgetAccounts b)
 
-testSumEq :: Double -> Double -> Bool
-testSumEq a b = (a - b) + b == a
+floatEq :: RealFloat a => a -> a -> a -> Bool 
+floatEq a b c = abs(a - b) <= abs(c)
