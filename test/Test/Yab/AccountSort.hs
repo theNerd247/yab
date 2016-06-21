@@ -12,9 +12,12 @@ Portability : POSIX
 
 module Test.Yab.AccountSort
 (
-  prop_csvTransEntry
+  accountSortTests
 )
 where
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
 
 import Data.Budget.Entry
 import Data.Serialization.Csv (csvEncodeOptions)
@@ -29,6 +32,10 @@ import qualified Data.Csv as CSV
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vector as DV
 
+accountSortTests :: [TestTree]
+accountSortTests = [
+  testProperty "csv_TransEntry" prop_csvTransEntry
+  ]
 
 -- | sample data line found in a bank's csv file.
 data SampleCSVLine = SampleCSVLine 

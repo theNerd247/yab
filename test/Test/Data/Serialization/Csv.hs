@@ -11,12 +11,12 @@ Portability : POSIX
 
 module Test.Data.Serialization.Csv
 (
-  prop_CSVField
-, prop_invalidDate
-, prop_validDate
+csvTests
 )
 where
 
+import Test.Tasty
+import Test.Tasty.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
 import Test.Data.Budget.Budget
@@ -25,6 +25,13 @@ import Data.Serialization.Csv
 
 import qualified Data.Time as DT
 import qualified Data.Csv as CSV
+
+csvTests :: [TestTree]
+csvTests = [
+  testProperty "parse_validDate" prop_validDate
+  ,testProperty "parse_invalidDate" prop_invalidDate
+  ,testProperty "csv_day" (prop_CSVField :: DT.Day -> Bool)
+  ]
 
 newtype DayString = DayString {getDayString :: String} 
   deriving (Eq,Ord,Show,Read)

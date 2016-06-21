@@ -13,23 +13,33 @@ Portability : POSIX
 
 module Test.Data.Budget.Budget
 (
-prop_AddAccount
-,prop_RemoveAccount
-,prop_MergeAccount
-,prop_Newpaycheck
-,prop_CheckBudgetBalanced
-,prop_BudgetBalance
+budgetTests
 )
 where
 
+import Test.Tasty
+import Test.Tasty.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
 import Data.Budget
 import Test.LoremWords
 
+
 import qualified Data.Monoid as DMo
 import qualified Data.Map as DM
 import qualified Data.Time as DT
+
+budgetTests :: [TestTree]
+budgetTests = [
+  testProperty "add_account" prop_AddAccount
+  ,testProperty "remove_account" prop_RemoveAccount
+  ,testProperty "merge_account" prop_MergeAccount
+  ,testProperty "new_paycheck" prop_Newpaycheck
+  ,testProperty "check_budget_balanced" prop_CheckBudgetBalanced
+  ,testProperty "check_budget_unbalanced" prop_CheckBudgetUnBalanced
+  {-,testProperty "budget_balance_empty" prop_BudgetBalanceEmpty-}
+  {-,testProperty "budget_balance_nonempty" prop_BudgetBalanceNonEmpty-}
+  ]
 
 posNum :: (Num a, Ord a, Arbitrary a) => Gen a
 posNum = getPositive <$> arbitrary
@@ -53,7 +63,7 @@ instance Arbitrary Account where
 
 instance Arbitrary (DM.Map Name Account) where
   arbitrary = do 
-    DM.fromList <$> (listOf1 genItem)
+    DM.fromList <$> (listOf genItem)
     where
       genItem = ((,)) <$> loremWord <*> arbitrary
 
@@ -62,6 +72,38 @@ instance Arbitrary Budget where
     <$> arbitrary
     <*> suchThat posNum (/= 0)
     <*> suchThat posNum (/= 0)
+
+newtype BalancedBudget = BalancedBudget {getBalancedBudget :: Budget} deriving Show
+
+newtype UnbalancedBudget = UnbalancedBudget {getUnbalancedBudget :: Budget} deriving Show
+
+instance Arbitrary BalancedBudget where
+  arbitrary = BalancedBudget <$> do
+    accounts <- arbitrary
+    rate <- suchThat posNum (/=0)
+    return $ Budget 
+      {
+        budgetAccounts = accounts 
+      , budgetIncome = (sum $ accountAmount <$> accounts) 
+      , budgetRate = rate
+      }
+
+instance Arbitrary UnbalancedBudget where
+  arbitrary = UnbalancedBudget <$> do
+    -- prevent an empty budget list because this will cause
+    -- checkBudgetBalanced to succeed.
+    accounts <- suchThat arbitrary (not . DM.null)
+    income <- suchThat posNum (/= (sum $ accountAmount <$> accounts))
+    rate <- suchThat posNum (/= 0)
+    return $ Budget 
+      {
+        budgetAccounts = accounts
+      , budgetIncome = income
+      , budgetRate = rate
+      }
+    
+budgetBalanceCheck :: Budget -> Bool
+budgetBalanceCheck b = ((budgetIncome b) - (sum $ accountAmount <$> (budgetAccounts b))) == 0
 
 newtype NonEmptyMap k a = NonEmptyMap {getNonEmptyMap :: DM.Map k a} deriving (Eq,Ord,Show)
 
@@ -110,23 +152,21 @@ prop_Newpaycheck am d b =
     checkEntry eam entry = DMo.All $ (testEntry eam) == entry
     testEntry a = Entry{entryDate = d, entryDesc = "new paycheck", entryAmount = a}
 
-prop_CheckBudgetBalanced :: Property
-prop_CheckBudgetBalanced = conjoin $
-  [
-    \b -> balanced b ==> checkBudgetBalanced b == True
-    ,\b -> not (balanced b) ==> checkBudgetBalanced b == False
-  ]
-  where
-    balanced b = ((budgetIncome b) - (sum $ accountAmount <$> (budgetAccounts b))) /= 0
+prop_CheckBudgetBalanced :: BalancedBudget -> Bool
+prop_CheckBudgetBalanced b = checkBudgetBalanced (getBalancedBudget b) == True
+
+prop_CheckBudgetUnBalanced :: UnbalancedBudget -> Bool
+prop_CheckBudgetUnBalanced b = checkBudgetBalanced (getUnbalancedBudget b) == False
 
 -- | Is the budgetBalance function accurate?
-prop_BudgetBalance :: Property
-prop_BudgetBalance = conjoin $ 
-  [
-    \b -> emptyBudget b ==> budgetBalance b == 0
-  , \b -> not (emptyBudget b) ==> (budgetBalance b) + (summedAccounts b) == (budgetIncome b)
-  , \b -> not (emptyBudget b) ==> (budgetIncome b) - (budgetBalance b) == (summedAccounts b)
-  ]
+prop_BudgetBalanceEmpty :: Budget -> Property
+prop_BudgetBalanceEmpty b = emptyBudget b ==> budgetBalance b == 0
+    where
+      emptyBudget = DM.null . budgetAccounts
+
+prop_BudgetBalanceNonEmpty :: Budget -> Property
+prop_BudgetBalanceNonEmpty b = 
+  not (emptyBudget b) ==> (budgetBalance b) + (summedAccounts b) == (budgetIncome b) 
     where
       emptyBudget = not . DM.null . budgetAccounts
       summedAccounts b = sum (accountAmount <$> budgetAccounts b)
