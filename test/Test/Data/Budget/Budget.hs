@@ -24,25 +24,17 @@ import Test.QuickCheck.Monadic
 import Data.Budget
 import Test.LoremWords
 
-
 import qualified Data.Monoid as DMo
 import qualified Data.Map as DM
 import qualified Data.Time as DT
 
-budgetTests :: [TestTree]
-budgetTests = [
-  testProperty "add_account" prop_AddAccount
-  ,testProperty "remove_account" prop_RemoveAccount
-  ,testProperty "merge_account" prop_MergeAccount
-  ,testProperty "new_paycheck" prop_Newpaycheck
-  ,testProperty "check_budget_balanced" prop_CheckBudgetBalanced
-  ,testProperty "check_budget_unbalanced" prop_CheckBudgetUnBalanced
-  {-,testProperty "budget_balance_empty" prop_BudgetBalanceEmpty-}
-  {-,testProperty "budget_balance_nonempty" prop_BudgetBalanceNonEmpty-}
-  ]
+newtype BalancedBudget = BalancedBudget {getBalancedBudget :: Budget} deriving Show
 
-posNum :: (Num a, Ord a, Arbitrary a) => Gen a
-posNum = getPositive <$> arbitrary
+newtype UnbalancedBudget = UnbalancedBudget {getUnbalancedBudget :: Budget} deriving Show
+
+newtype NonEmptyMap k a = NonEmptyMap {getNonEmptyMap :: DM.Map k a} deriving (Eq,Ord,Show)
+
+newtype NonSingleMap k a = NonSingleMap {getNonSingleMap :: DM.Map k a} deriving (Eq,Ord,Show)
 
 instance Arbitrary Name where
   arbitrary = loremWord
@@ -73,10 +65,6 @@ instance Arbitrary Budget where
     <*> suchThat posNum (/= 0)
     <*> suchThat posNum (/= 0)
 
-newtype BalancedBudget = BalancedBudget {getBalancedBudget :: Budget} deriving Show
-
-newtype UnbalancedBudget = UnbalancedBudget {getUnbalancedBudget :: Budget} deriving Show
-
 instance Arbitrary BalancedBudget where
   arbitrary = BalancedBudget <$> do
     accounts <- arbitrary
@@ -102,18 +90,26 @@ instance Arbitrary UnbalancedBudget where
       , budgetRate = rate
       }
     
-budgetBalanceCheck :: Budget -> Bool
-budgetBalanceCheck b = ((budgetIncome b) - (sum $ accountAmount <$> (budgetAccounts b))) == 0
-
-newtype NonEmptyMap k a = NonEmptyMap {getNonEmptyMap :: DM.Map k a} deriving (Eq,Ord,Show)
-
 instance (Ord k, Arbitrary k, Arbitrary a) => Arbitrary (NonEmptyMap k a) where
   arbitrary = NonEmptyMap . DM.fromList . getNonEmpty <$> arbitrary
 
-newtype NonSingleMap k a = NonSingleMap {getNonSingleMap :: DM.Map k a} deriving (Eq,Ord,Show)
-
 instance (Ord k, Arbitrary k, Arbitrary a) => Arbitrary (NonSingleMap k a) where
   arbitrary = NonSingleMap . DM.fromList <$> suchThat arbitrary ((1 <) . length)
+
+budgetTests :: [TestTree]
+budgetTests = [
+  testProperty "add_account" prop_AddAccount
+  ,testProperty "remove_account" prop_RemoveAccount
+  ,testProperty "merge_account" prop_MergeAccount
+  ,testProperty "new_paycheck" prop_Newpaycheck
+  ,testProperty "check_budget_balanced" prop_CheckBudgetBalanced
+  ,testProperty "check_budget_unbalanced" prop_CheckBudgetUnBalanced
+  {-,testProperty "budget_balance_empty" prop_BudgetBalanceEmpty-}
+  {-,testProperty "budget_balance_nonempty" prop_BudgetBalanceNonEmpty-}
+  ]
+
+posNum :: (Num a, Ord a, Arbitrary a) => Gen a
+posNum = getPositive <$> arbitrary
 
 prop_AddAccount :: Name -> Amount -> BudgetAccounts -> Bool
 prop_AddAccount n acnt b = 
