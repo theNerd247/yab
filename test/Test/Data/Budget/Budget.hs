@@ -36,6 +36,8 @@ newtype NonEmptyMap k a = NonEmptyMap {getNonEmptyMap :: DM.Map k a} deriving (E
 
 newtype NonSingleMap k a = NonSingleMap {getNonSingleMap :: DM.Map k a} deriving (Eq,Ord,Show)
 
+newtype EmptyBudget = EmptyBudget {getEmptyBudget :: Budget} deriving Show
+
 instance Arbitrary Name where
   arbitrary = loremWord
 
@@ -96,6 +98,11 @@ instance (Ord k, Arbitrary k, Arbitrary a) => Arbitrary (NonEmptyMap k a) where
 instance (Ord k, Arbitrary k, Arbitrary a) => Arbitrary (NonSingleMap k a) where
   arbitrary = NonSingleMap . DM.fromList <$> suchThat arbitrary ((1 <) . length)
 
+instance Arbitrary EmptyBudget where
+  arbitrary = EmptyBudget <$> do
+    budget <- arbitrary
+    return $ budget {budgetAccounts = DM.empty}
+
 budgetTests :: [TestTree]
 budgetTests = [
   testProperty "add_account" prop_AddAccount
@@ -104,7 +111,7 @@ budgetTests = [
   ,testProperty "new_paycheck" prop_Newpaycheck
   ,testProperty "check_budget_balanced" prop_CheckBudgetBalanced
   ,testProperty "check_budget_unbalanced" prop_CheckBudgetUnBalanced
-  {-,testProperty "budget_balance_empty" prop_BudgetBalanceEmpty-}
+  ,testProperty "budget_balance_empty" prop_BudgetBalanceEmpty
   {-,testProperty "budget_balance_nonempty" prop_BudgetBalanceNonEmpty-}
   ]
 
@@ -155,10 +162,8 @@ prop_CheckBudgetUnBalanced :: UnbalancedBudget -> Bool
 prop_CheckBudgetUnBalanced b = checkBudgetBalanced (getUnbalancedBudget b) == False
 
 -- | Is the budgetBalance function accurate?
-prop_BudgetBalanceEmpty :: Budget -> Property
-prop_BudgetBalanceEmpty b = emptyBudget b ==> budgetBalance b == 0
-    where
-      emptyBudget = DM.null . budgetAccounts
+prop_BudgetBalanceEmpty :: EmptyBudget -> Bool
+prop_BudgetBalanceEmpty = (==0) . budgetBalance . getEmptyBudget
 
 prop_BudgetBalanceNonEmpty :: Budget -> Property
 prop_BudgetBalanceNonEmpty b = 
