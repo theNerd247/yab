@@ -17,14 +17,18 @@ module Budget
   ,printAccountStatuses
   ,printAccountList
   ,printAccountEntries
+  ,runUserInput
 )
 where
 
 import YabCommon
 import Data.Budget
 import Data.Serialization
+
 import qualified Data.Map as DM
+import qualified Data.List as DL
 import qualified System.Directory as SD
+import Data.Maybe (fromMaybe)
 
 import System.FilePath.Posix ((</>))
 
@@ -50,3 +54,13 @@ printAccountEntries :: (MonadIO m) => Account -> m ()
 printAccountEntries = liftIO . mapM_ (putStrLn . printEntry) . accountEntries
   where
     printEntry (Entry da de a) = (show da) ++ " " ++ (show $ take 40 de) ++ " " ++ (showAmount a)
+
+runUserInput :: (MonadIO m) => String -> [(String, m a)] -> m a
+runUserInput prompt acts = do
+  liftIO $ putStrLn prompt
+  ui <- liftIO getLine
+  runUserAct ui acts
+    where
+      runUserAct _ [] = fail "No actions provided for runUserInput...blame the programmer"
+      runUserAct i acts = maybe defaultAct snd $ DL.find ((i ==) . fst) acts
+      defaultAct = runUserInput prompt acts

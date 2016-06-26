@@ -75,6 +75,7 @@ instance CommandGroup BudgetCommand where
     [
       cmd' "status" "get the overal status of the budget" $ pure BudgetStatus
      ,cmd' "newpay" "adds a new paycheck to the accounts" $ NewPayCheck <$> parse <*> parse
+     ,cmd' "from-newpay" "Creates new paycheck entries based on entries in 'newpay' account" $ pure NewPayCheckAcc
      ,cmd' "ls" "list the accounts in the budget" $ pure ListAccounts 
      ,cmd' "init" "initialize the budget directory" $ pure InitBudgetDir
     ]
@@ -91,6 +92,8 @@ instance CommandGroup AccountCommand where
      ,cmd' "status" "the status of an account" $ AccountStatus <$> parseName
      ,cmd' "new-entry" "add a new entry to the account" $ NewAccountEntry <$> parseName <*> parse
      ,cmd' "show" "show the account's entries" $ ShowEntries <$> parseName
+     ,cmd' "sort" "Sort entries in given bank transaction file to respective accounts" 
+       $ SortTrans <$> parseString "FILEPATH" "File path to csv bank transaction file"
     ]
 
 instance Parseable Amount where

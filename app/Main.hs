@@ -22,7 +22,10 @@ import Data.Serialization
 import Types
 import Parser
 import Budget
+import Pretty
+import AccountSort
 
+import qualified Data.Foldable as DF
 import qualified Data.List as DL
 import qualified System.Directory as SD
 import qualified System.FilePath.Posix as SFP
@@ -77,12 +80,29 @@ instance Command AccountCommand where
         mkEntries a = a {accountEntries = apnd entry . accountEntries $ a}
         apnd a l = l ++ [a]
 
+  runCmd (SortTrans fpath) = runWithBudget $ \budget -> do
+    fp <- getBudgetDir
+    sortTransactions fpath fp budget
+
 instance Command BudgetCommand where
   runCmd BudgetStatus = runWithBudget $ \b -> printBudgetBalanced b >> printAccountStatuses b
 
   runCmd (NewPayCheck am da) = do
     b <- runWithBudget $ return . newPaycheck am da
     saveBudget b
+
+  runCmd NewPayCheckAcc = do
+    bdir <- getBudgetDir
+    budget <- getBudget
+    paycheckAcc <- loadCSVFile (newpayFile bdir)
+    b <- DF.foldrM newpayacc budget paycheckAcc
+    saveBudget b
+    liftIO $ writeFile (newpayFile bdir) ""
+    where
+      newpayFile bdir = bdir </> "accounts" </> "newpay.csv"
+      newpayacc e b = do 
+        liftIO . putStrLn $ "Creating new paycheck from: " ++ (prettyShow e)
+        return $ newPaycheck (entryAmount e) (entryDate e) b
 
   runCmd InitBudgetDir = do
     f <- getBudgetDir

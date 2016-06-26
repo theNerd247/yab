@@ -36,6 +36,7 @@ module Data.Budget.Budget
   ,budgetBalance
   ,findMinPayOff
   ,newPaycheck
+  ,updateBudgetAccountsWith
 )
 where
 
@@ -83,11 +84,12 @@ instance Exception AccountExistsException
 
 -- | Checks if a budget is balanced (its income is equal to its spending)
 checkBudgetBalanced :: Budget -> Bool
-checkBudgetBalanced = (>= 0) . budgetBalance
+checkBudgetBalanced = (== 0) . budgetBalance
 
 budgetBalance :: Budget -> Amount
-budgetBalance (Budget {budgetAccounts = as, budgetIncome = i}) = 
-  i - (sum $ accountAmount <$> as)
+budgetBalance (Budget {budgetAccounts = as, budgetIncome = i}) 
+  | DM.null as = 0
+  | otherwise = i - (sum $ accountAmount <$> as)
 
 -- | Checks the accounts contained within a budget using @checkAccount@
 checkAccounts :: Budget -> DM.Map Name Bool
@@ -117,6 +119,9 @@ mergeAccountData a b = Account
    accountAmount = accountAmount a + accountAmount b
   ,accountEntries = DL.union (accountEntries a) (accountEntries b)
   }
+
+updateBudgetAccountsWith :: (BudgetAccounts -> BudgetAccounts) -> Budget -> Budget
+updateBudgetAccountsWith f b = b{budgetAccounts = f (budgetAccounts b)}
 
 addAccount :: Name -> Amount -> BudgetAccounts -> BudgetAccounts
 addAccount n a = DM.insert n (Account a [])
