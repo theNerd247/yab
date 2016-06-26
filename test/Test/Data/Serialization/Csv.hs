@@ -19,7 +19,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
-import Test.Data.Budget.Budget
+import Test.Data.Budget
 
 import Data.Serialization.Csv
 

@@ -18,8 +18,7 @@ module Data.Serialization.Yaml
 where
 
 import YabCommon
-import Data.Budget.Budget
-import Data.Budget.Entry
+import Data.Budget
 import Data.Serialization.Errors 
 
 import qualified Data.Yaml as YAML
