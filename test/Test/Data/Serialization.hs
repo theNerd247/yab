@@ -28,7 +28,7 @@ import System.FilePath.Posix ((</>))
 import qualified Data.Csv as CSV
 import qualified HsShellScript as HShell
 
-import Test.Data.Budget.Budget
+import Test.Data.Budget
 
 serializeTests :: [TestTree]
 serializeTests = [runSerializeTest $ \dir -> testGroup "Budget Dir Tests" 

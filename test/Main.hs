@@ -6,7 +6,7 @@ import Test.Tasty.Runners
 import Test.Tasty.Ingredients.Rerun
 import Test.Tasty.QuickCheck
 
-import Test.Data.Budget.Budget
+import Test.Data.Budget
 import Test.Data.Serialization
 import Test.Data.Serialization.Csv
 import Test.Yab.AccountSort

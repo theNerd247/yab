@@ -31,8 +31,6 @@ library
     ,directory
   exposed-modules:     
     Data.Budget
-    ,Data.Budget.Budget
-    ,Data.Budget.Entry
     ,Data.Serialization
     ,Data.Serialization.Yaml
     ,Data.Serialization.Errors

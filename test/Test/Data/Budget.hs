@@ -11,7 +11,7 @@ Portability : POSIX
 
 -}
 
-module Test.Data.Budget.Budget
+module Test.Data.Budget
 (
 budgetTests
 )

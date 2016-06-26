@@ -19,11 +19,11 @@ where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import Data.Budget.Entry
+import Data.Budget
 import Data.Serialization.Csv (csvEncodeOptions)
 import Test.QuickCheck
 import Test.LoremWords
-import Test.Data.Budget.Budget
+import Test.Data.Budget
 import Yab.AccountSort
 
 import qualified Data.Time as DT
