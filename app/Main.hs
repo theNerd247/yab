@@ -127,15 +127,13 @@ main = getProgOpts >>= \ops -> do
       }
 
 getAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m Account
-getAccount name =  maybe (throwM $ AccountNotExistsException name) return . DM.lookup name
+getAccount name = maybe (throwM $ AccountNotExistsException name) return . DM.lookup name
 
 runWithBudget :: (Budget -> CliM a) -> CliM a
 runWithBudget f = getBudget >>= f
 
 saveBudget :: Budget -> CliM ()
-saveBudget b = do
-    bfp <- getBudgetDir
-    serialize (bfp </> "budget.yaml") b
+saveBudget b = getBudgetFilePath >>= flip serialize b
 
 runAccountCmd :: (BudgetAccounts -> CliM a) -> CliM a
 runAccountCmd f = runWithBudget (f . budgetAccounts)
@@ -148,8 +146,13 @@ saveAccounts :: BudgetAccounts -> CliM ()
 saveAccounts accs = getBudgetDir >>= flip serialize accs
 
 getBudget :: CliM Budget
-getBudget = getBudgetDir >>= deserialize . (</> "budget.yaml")
+getBudget = getBudgetFilePath >>= deserialize
 
 getBudgetDir = CMS.gets mOpts >>= return . budgetFileDir
+getBudgetFileName = CMS.gets mOpts >>= return . budgetFileName
+getBudgetFilePath = do
+  bfd <- getBudgetDir
+  bfn <- getBudgetFileName
+  return (bfd </> bfn)
 
 printOut = liftIO . putStrLn
