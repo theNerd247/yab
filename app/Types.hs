@@ -38,6 +38,7 @@ data MainProg = MainProg
 data MainOpts = MainOpts 
   {
     budgetFileDir :: FilePath
+  , budgetFileName :: FilePath
   }
 
 data Prog = 

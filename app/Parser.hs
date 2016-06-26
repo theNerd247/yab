@@ -47,14 +47,21 @@ instance Parseable MainProg where
   parse = MainProg <$> parse <*> parse
 
 instance Parseable MainOpts where
-  parse = MainOpts <$> pBudgetFile
+  parse = MainOpts <$> pBudgetFileDir <*> pBudgetFileName
 
-pBudgetFile = OA.strOption $
-     OA.value "."
-  <> OA.short 'b'
-  <> OA.long "budget-path"
-  <> OA.help "The budget config file to use"
+pBudgetFileName = OA.strOption $
+     OA.value "budget.yml"
+  <> OA.short 'f'
+  <> OA.long "budget-file"
+  <> OA.help "The budget YAML file to use"
   <> OA.metavar "BUDGETFILE"
+
+pBudgetFileDir = OA.strOption $
+     OA.value "."
+  <> OA.short 'd'
+  <> OA.long "budget-dir"
+  <> OA.help "The budget directory to use"
+  <> OA.metavar "BUDGETDIR"
 
 instance Parseable Prog where
   parse = OA.hsubparser $
