@@ -27,6 +27,7 @@ import Test.LoremWords
 import qualified Data.Monoid as DMo
 import qualified Data.Map as DM
 import qualified Data.Time as DT
+import qualified Data.List as DL
 
 newtype BalancedBudget = BalancedBudget {getBalancedBudget :: Budget} deriving Show
 
@@ -113,6 +114,7 @@ budgetTests = [
   ,testProperty "check_budget_unbalanced" prop_CheckBudgetUnBalanced
   ,testProperty "budget_balance_empty" prop_BudgetBalanceEmpty
   ,testProperty "budget_balance_nonempty" prop_BudgetBalanceNonEmpty
+  ,testProperty "account_balance_nonempty" prop_AccountBalanceNonEmpty
   ]
 
 posNum :: (Num a, Ord a, Arbitrary a) => Gen a
@@ -168,18 +170,37 @@ prop_BudgetBalanceEmpty = (==0) . budgetBalance . getEmptyBudget
 prop_BudgetBalanceNonEmpty :: Budget -> Property
 prop_BudgetBalanceNonEmpty b = 
   nonEmptyBudget b ==> 
-    counterexample (
-      "Balance: " ++ (show bal) 
-      ++ "\n" ++ "SummedAccounts: " ++ (show summedAccounts)
-      ++ "\n" ++ "Diff: " ++ (show $ bal + summedAccounts - budgetIncome b)
-      )
+    counterexample failMsg
     -- Run our equality test with 11 decimal precision. Anything beyond that may
     -- not be necessary?
-    $ floatEq (bal + summedAccounts) (budgetIncome b) 1e-11
+    $ floatEq (bal + summedAccounts) (budgetIncome b) amountPrecision
   where
     bal = budgetBalance b
     nonEmptyBudget = not . DM.null . budgetAccounts
     summedAccounts = sum $ accountAmount <$> (budgetAccounts b)
+    failMsg = 
+      "Balance: " ++ (show bal) 
+      ++ "\n" ++ "SummedAccounts: " ++ (show summedAccounts)
+      ++ "\n" ++ "Diff: " ++ (show $ bal + summedAccounts - budgetIncome b)
 
+-- | Test equality of floating point numbers given an error. For example:
+-- > floatEq 1.23 1.234 1e-3 
+-- will show the numbers are equivalent as long as the absolute difference is
+-- less than or equal to 1e-3.
 floatEq :: RealFloat a => a -> a -> a -> Bool 
 floatEq a b c = abs(a - b) <= abs(c)
+
+amountPrecision = 1e-9
+
+prop_AccountBalanceNonEmpty :: Account -> Property
+prop_AccountBalanceNonEmpty a = 
+  not (DL.null $ accountEntries a) ==>
+  counterexample failMsg
+  $ floatEq bal expected amountPrecision
+  where
+    expected = sum . fmap entryAmount . accountEntries $ a
+    bal = accountBalance a
+    failMsg = 
+      "Balance: " ++ (show bal)
+      ++ "\n" ++ "Expected: " ++ (show expected)
+      ++ "\n" ++ "Diff: " ++ (show $ expected - bal)
