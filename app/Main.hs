@@ -85,7 +85,11 @@ instance Command AccountCommand where
     sortTransactions fpath fp budget
 
 instance Command BudgetCommand where
-  runCmd BudgetStatus = runWithBudget $ \b -> printBudgetBalanced b >> printAccountStatuses b
+  runCmd BudgetStatus = runWithBudget $ \b -> do 
+    printBudgetBalanced b 
+    printAccountStatuses b
+
+  runCmd BudgetBalance = runWithBudget printBudgetBalance
 
   runCmd (NewPayCheck am da) = do
     b <- runWithBudget $ return . newPaycheck am da

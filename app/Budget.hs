@@ -14,6 +14,7 @@ module Budget
 (
   printAccountStatus
   ,printBudgetBalanced
+  ,printBudgetBalance
   ,printAccountStatuses
   ,printAccountList
   ,printAccountEntries
@@ -35,7 +36,10 @@ import System.FilePath.Posix ((</>))
 printBudgetBalanced b = 
   case checkBudgetBalanced b of
     True -> liftIO $ putStrLn "Budget is balanced!" 
-    False -> liftIO . putStrLn $ "Budget is unbalanced: " ++ (showAmount . budgetBalance $ b)
+    False -> liftIO . putStrLn $ 
+      "Budget is unbalanced: " ++ (showAmount . budgetBalance $ b)
+
+printBudgetBalance b = liftIO . putStrLn $ "Budget Balance: " ++ (showAmount . budgetBalance $ b)
 
 printAccountStatuses :: (MonadIO m) => Budget -> m ()
 printAccountStatuses = sequence_ . DM.elems . DM.mapWithKey printAccountStatus . budgetAccounts
