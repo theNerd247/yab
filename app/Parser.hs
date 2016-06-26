@@ -81,6 +81,7 @@ instance CommandGroup BudgetCommand where
   cmds = 
     [
       cmd' "status" "get the overal status of the budget" $ pure BudgetStatus
+     ,cmd' "bal" "print the current balance of the budget" $ pure BudgetBalance
      ,cmd' "newpay" "adds a new paycheck to the accounts" $ NewPayCheck <$> parse <*> parse
      ,cmd' "from-newpay" "Creates new paycheck entries based on entries in 'newpay' account" $ pure NewPayCheckAcc
      ,cmd' "ls" "list the accounts in the budget" $ pure ListAccounts 

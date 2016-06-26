@@ -47,6 +47,7 @@ data Prog =
 
 data BudgetCommand = 
     BudgetStatus
+  | BudgetBalance
   | NewPayCheck Amount Day
   | NewPayCheckAcc
   | ListAccounts
