@@ -10,7 +10,10 @@ Stability   :
 Portability : POSIX
 
 -}
-module Data.MongoDB ( ) where
+module Data.MongoDB
+    ( pushBudget
+    , pullBudget
+    ) where
 
 import           Database.MongoDB
 import           Data.Budget
