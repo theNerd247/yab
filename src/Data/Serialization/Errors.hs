@@ -10,19 +10,14 @@ Portability : POSIX
 More specific error handling (such as for YAML serialization) should be handled
 within its respective module.
 -}
+module Data.Serialization.Errors ( printEAndExit ) where
 
-module Data.Serialization.Errors
-(
-  printEAndExit
-)
-where
+import           YabCommon
 
-import YabCommon
-
-import qualified System.Exit as SE
+import qualified System.Exit       as SE
 import qualified Control.Exception as CE
 
 printEAndExit :: (MonadIO m, CE.Exception e) => e -> m a
 printEAndExit e = do
-  liftIO . putStrLn . displayException $ e
-  liftIO SE.exitFailure 
+    liftIO . putStrLn . displayException $ e
+    liftIO SE.exitFailure
