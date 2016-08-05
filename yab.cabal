@@ -29,6 +29,8 @@ library
     ,scientific
     ,aeson
     ,directory
+    ,mongoDB
+    ,bson
   exposed-modules:     
     Data.Budget
     ,Data.Serialization
@@ -51,6 +53,7 @@ executable yab
     ,directory
     ,optparse-applicative
     ,pretty
+    ,mongoDB
 
   default-language:    Haskell2010
 

@@ -2,7 +2,7 @@
 {-#LANGUAGE DeriveDataTypeable #-}
 
 {-|
-Module      : Name
+Module      : BudgetName
 Description : Budget datatype definitions
 Copyright   : 
 License     : GPL-2
@@ -15,13 +15,9 @@ Portability : POSIX
 module Data.Budget
 (
   Budget(..)
-  ,Name(..)
+  ,BudgetName(..)
   ,Amount(..)
   ,Rate(..)
-  ,Account(..)
-  ,BudgetAccounts(..)
-  ,AccountNotExistsException(..)
-  ,AccountExistsException(..)
   ,Entry(..)
   ,Entries(..)
   ,mergeAccountData
@@ -42,34 +38,25 @@ module Data.Budget
 )
 where
 
-import YabCommon
+import Data.Tree
 import qualified Data.Map as DM
 import qualified Data.List as DL
 
-type Name = String
+type BudgetName = String
 
 type Rate = Integer
 
 type Amount = Double
 
-data Account = Account
-  { 
-    accountAmount :: Amount
-  , accountEntries :: Entries
-  } deriving (Generic,Typeable,Show,Read,Eq)
+type BudgetName = String
+type Amount = Double
 
-type BudgetAccounts = DM.Map Name Account
+data BudgetData  = BudgetData 
+  { budgetBudgetName :: BudgetName 
+  , budgetAmount :: Amount
+  } deriving (Eq,Ord,Show)
 
-data Budget = Budget
-  {
-    -- | The account rates
-    budgetAccounts :: BudgetAccounts
-    -- | The total income rate of the budget (in $/budget period)
-    ,budgetIncome  :: Amount
-    -- | The amount of time for a single budget period (in days)
-    ,budgetRate    :: Rate
-  }
-  deriving (Generic,Typeable,Show,Read,Eq)
+type Budget = Tree BudgetData
 
 data Entry = Entry
   {
@@ -79,22 +66,10 @@ data Entry = Entry
     ,entryDesc   :: String
     -- | The amount of the entry 
     ,entryAmount :: Double
+    -- | the budget the entry belongs to
+    ,budgetTag :: Maybe BudgetName
   }
   deriving (Generic,Typeable,Show,Read,Eq)
-
-type Entries = [Entry]
-
-data AccountNotExistsException = AccountNotExistsException Name deriving (Generic,Eq,Ord,Typeable)
-data AccountExistsException = AccountExistsException Name deriving (Generic,Eq,Ord,Typeable)
-
-instance Show AccountNotExistsException where
-  show (AccountNotExistsException n) = "Account doesn't exist: " ++ n
-
-instance Show AccountExistsException where
-  show (AccountExistsException n) = "Account: " ++ n ++ " already exists!"
-
-instance Exception AccountNotExistsException
-instance Exception AccountExistsException
 
 -- | Checks if a budget is balanced (its income is equal to its spending)
 checkBudgetBalanced :: Budget -> Bool
@@ -106,7 +81,7 @@ budgetBalance (Budget {budgetAccounts = as, budgetIncome = i})
   | otherwise = i - (sum $ accountAmount <$> as)
 
 -- | Checks the accounts contained within a budget using @checkAccount@
-checkAccounts :: Budget -> DM.Map Name Bool
+checkAccounts :: Budget -> DM.Map BudgetName Bool
 checkAccounts = fmap checkAccount . budgetAccounts
 
 -- | Checks the given account to make sure that it's balance isn't negative
@@ -137,22 +112,22 @@ mergeAccountData a b = Account
 updateBudgetAccountsWith :: (BudgetAccounts -> BudgetAccounts) -> Budget -> Budget
 updateBudgetAccountsWith f b = b{budgetAccounts = f (budgetAccounts b)}
 
-addAccount :: Name -> Amount -> BudgetAccounts -> BudgetAccounts
+addAccount :: BudgetName -> Amount -> BudgetAccounts -> BudgetAccounts
 addAccount n a = DM.insert n (Account a [])
 
-addAccount' :: (MonadThrow m) => Name -> Amount -> BudgetAccounts -> m BudgetAccounts
+addAccount' :: (MonadThrow m) => BudgetName -> Amount -> BudgetAccounts -> m BudgetAccounts
 addAccount' n a b 
   | DM.member n b = throwM $ AccountExistsException n
   | otherwise = return $ addAccount n a b
 
 -- | Remove an account from the budget. If the account does exist then AccountNotExistsException is thrown
-removeAccount :: (MonadThrow m) => Name -> BudgetAccounts -> m BudgetAccounts
+removeAccount :: (MonadThrow m) => BudgetName -> BudgetAccounts -> m BudgetAccounts
 removeAccount n m
   | DM.member n m == False = throwM $ AccountNotExistsException n
   | otherwise = return $ DM.delete n m
 
 -- | Merge two accounts. IF either account doesn't exist then AccountNotExistsException is thrown.
-mergeAccounts :: (MonadThrow m) => Name -> Name -> BudgetAccounts -> m BudgetAccounts
+mergeAccounts :: (MonadThrow m) => BudgetName -> BudgetName -> BudgetAccounts -> m BudgetAccounts
 mergeAccounts na nb bas = do 
   accA <- checkFail (DM.lookup na bas) na
   accB <- checkFail (DM.lookup nb bas) nb
