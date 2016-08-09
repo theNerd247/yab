@@ -4,6 +4,8 @@ module Data.Amount
     , showDecimal
     ) where
 
+import qualified Data.List as DL
+
 type Amount = Double
 
 showAmount :: (Show a) => a -> String

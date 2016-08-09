@@ -19,27 +19,17 @@ library
   build-depends:       base >= 4.7 && < 5
     ,yaml
     ,exceptions
-    ,filepath
     ,transformers
     ,containers
+    ,text
     ,time
-    ,cassava
-    ,vector
-    ,bytestring
-    ,scientific
-    ,aeson
-    ,directory
     ,mongoDB
     ,bson
     ,lens
   exposed-modules:     
     Data.Budget
-    ,Data.Serialization
-    ,Data.Serialization.Yaml
-    ,Data.Serialization.Errors
-    ,Data.Serialization.Csv
-    ,Yab.AccountSort
-    ,YabCommon
+    ,Data.MongoDB
+    ,Data.Amount
 
 executable yab
   hs-source-dirs:      app
@@ -50,11 +40,13 @@ executable yab
     ,yab
     ,containers
     ,transformers
-    ,filepath
-    ,directory
     ,optparse-applicative
     ,pretty
     ,mongoDB
+    ,exceptions
+    ,lens
+    ,time
+    ,text
 
   default-language:    Haskell2010
 
@@ -70,7 +62,6 @@ test-suite yab-test
     ,time
     ,cassava
     ,hsshellscript
-    ,filepath
     ,tasty
     ,tasty-quickcheck
     ,tasty-rerun

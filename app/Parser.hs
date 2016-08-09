@@ -13,57 +13,34 @@ Portability : POSIX
 -}
 module Parser ( getProgOpts ) where
 
-import           YabCommon
 import           Data.Budget
-import           Data.Serialization
 import           Types
 import           Control.Applicative
+import           Control.Monad.IO.Class
+import           Data.Time
+import           Data.Char              ( isSpace )
+import           Data.String
+import qualified Control.Monad          as CM
+import           Database.MongoDB
 
-import qualified Options.Applicative as OA
+import qualified Options.Applicative    as OA
 
-import           Options.Applicative ( (<>), idm )
+import           Options.Applicative    ( (<>), idm )
 
 class Parseable a where
     parse :: OA.Parser a
-
-getProgOpts :: (MonadIO m) => m MainProg
-getProgOpts = liftIO $ OA.customExecParser prefs opts
-  where
-    opts = OA.info (OA.helper <*> parse)
-                   (OA.fullDesc
-                        <> OA.header "Yet Another Budgeting Program")
-    prefs = OA.prefs $ OA.showHelpOnError
-
-cmd' n h ops = OA.command n $ OA.info ops (OA.fullDesc <> OA.progDesc h)
 
 instance Parseable MainProg where
     parse = MainProg <$> parse <*> parse
 
 instance Parseable MainOpts where
-    parse = MainOpts <$> pBudgetFileDir <*> pBudgetFileName
-
-pBudgetFileName = OA.strOption $
-    OA.value "budget.yml"
-        <> OA.short 'f'
-        <> OA.long "budget-file"
-        <> OA.help "The budget YAML file to use"
-        <> OA.metavar "BUDGETFILE"
-
-pBudgetFileDir = OA.strOption $
-    OA.value "."
-        <> OA.short 'd'
-        <> OA.long "budget-dir"
-        <> OA.help "The budget directory to use"
-        <> OA.metavar "BUDGETDIR"
+    parse = MainOpts <$> parseDBOpt
 
 instance Parseable Prog where
     parse = OA.hsubparser $
         cmd' "budget"
              "Commands to interface with the budget"
              (BudgetProg <$> parse)
-            <> cmd' "account"
-                    "Commands to interface with accounts"
-                    (AccountProg <$> parse)
 
 class CommandGroup a where
     cmds :: [OA.Mod OA.CommandFields a]
@@ -75,37 +52,10 @@ instance Parseable BudgetCommand where
     parse = parseCmds
 
 instance CommandGroup BudgetCommand where
-    cmds = [ cmd' "status" "get the overal status of the budget" $
-               pure BudgetStatus
-           , cmd' "bal" "print the current balance of the budget" $
-               pure BudgetBalance
-           , cmd' "newpay" "adds a new paycheck to the accounts" $
-               NewPayCheck <$> parse <*> parse
-           , cmd' "from-newpay"
-                  "Creates new paycheck entries based on entries in 'newpay' account" $
-               pure NewPayCheckAcc
-           , cmd' "ls" "list the accounts in the budget" $ pure ListAccounts
-           , cmd' "init" "initialize the budget directory" $ pure InitBudgetDir
-           ]
-
-instance Parseable AccountCommand where
-    parse = parseCmds
-
-instance CommandGroup AccountCommand where
-    cmds = [ cmd' "add" "add a new account" $ AddAccount <$> parseName <*> parse
-           , cmd' "rm" "remove an account" $ RemoveAccount <$> parseName
-           , cmd' "merge" "merges two accounts into the first given" $
-               MergeAccounts <$> parseName <*> parseName
-           , cmd' "status" "the status of an account" $
-               AccountStatus <$> parseName
-           , cmd' "new-entry" "add a new entry to the account" $
-               NewAccountEntry <$> parseName <*> parse
-           , cmd' "show" "show the account's entries" $
-               ShowEntries <$> parseName
-           , cmd' "sort"
-                  "Sort entries in given bank transaction file to respective accounts"
-               $ SortTrans <$> parseString "FILEPATH"
-                                           "File path to csv bank transaction file"
+    cmds = [ cmd' "bal" "print the current balance of the budget" $
+               BudgetBalance <$> parseBudgetName
+           , cmd' "new" "create new budget" $ NewBudget <$> parseBudgetName
+           , cmd' "stat" "check status of the budget" $ BudgetStatus <$> parseBudgetName
            ]
 
 instance Parseable Amount where
@@ -121,11 +71,40 @@ instance Parseable Day where
         -- use our parser to parse the date
         getDay = OA.str >>= parseDate
 
-instance Parseable Entry where
-    parse = Entry <$> parse <*> desc <*> parse
-      where
-        desc = parseString "DESC" "The description of the entry"
+getProgOpts :: (MonadIO m) => m MainProg
+getProgOpts = liftIO $ OA.customExecParser prefs opts
+  where
+    opts = OA.info (OA.helper <*> parse)
+                   (OA.fullDesc
+                        <> OA.header "Yet Another Budgeting Program")
+    prefs = OA.prefs $ OA.showHelpOnError
 
-parseString meta h = OA.strArgument $ OA.help h <> OA.metavar meta
+cmd' n h ops = OA.command n $ OA.info ops (OA.fullDesc <> OA.progDesc h)
 
-parseName = parseString "NAME" "The name of the account"
+parseDBOpt = fmap fromString . OA.strOption $
+    OA.value "yab"
+        <> OA.short 'd'
+        <> OA.long "database"
+        <> OA.metavar "DATABASE"
+        <> OA.help "The database to use"
+
+parseString :: (IsString a) => String -> String -> OA.Parser a
+parseString meta h = fmap fromString . OA.strArgument $
+    OA.help h <> OA.metavar meta
+
+parseBudgetName = parseString "BUDGET-NAME" "The name of the budget"
+
+dayFormats = [ "%" ++ u ++ "m" ++ s ++ "%" ++ u ++ "d" ++ s ++ "%" ++ y
+             | u <- [ "", "_", "0", "-" ] 
+             , y <- [ "y", "Y" ] 
+             , s <- [ "/", "-" ] ]
+
+parseDate :: (CM.MonadPlus m) => String -> m Day
+parseDate s = case parseTimes s of
+    [] -> CM.mzero
+    (x : xs) -> return x
+  where
+    parseTimes s = mconcat $ parseFormat <$> dayFormats <*> pure s
+    parseFormat f s = [ t
+                      | (t, r) <- readSTime True defaultTimeLocale f s 
+                      , all isSpace r ]

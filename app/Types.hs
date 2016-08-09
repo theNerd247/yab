@@ -1,5 +1,6 @@
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE GADTs         #-}
+{-# LANGUAGE TupleSections   #-}
+{-# LANGUAGE GADTs           #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {-|
 Module      : Name
@@ -16,38 +17,30 @@ module Types
     ( MainProg(..)
     , MainOpts(..)
     , Prog(..)
-    , AccountCommand(..)
     , BudgetCommand(..)
+    , mainOpts
+    , prog
+    , mOpsCurDB
     ) where
 
-import           YabCommon
 import           Data.Budget
-import           Control.Applicative
+import           Control.Lens
+import           Database.MongoDB
 
 import qualified Options.Applicative as OA
 
-data MainProg = MainProg { mainOpts :: MainOpts
-                         , prog     :: Prog
+data MainProg = MainProg { _mainOpts :: MainOpts
+                         , _prog     :: Prog
                          }
 
-data MainOpts = MainOpts { budgetFileDir  :: FilePath
-                         , budgetFileName :: FilePath
-                         }
+data MainOpts = MainOpts { _mOpsCurDB :: Database }
 
-data Prog = AccountProg AccountCommand
-          | BudgetProg BudgetCommand
+data Prog = BudgetProg BudgetCommand
 
-data BudgetCommand = BudgetStatus
-                   | BudgetBalance
-                   | NewPayCheck Amount Day
-                   | NewPayCheckAcc
-                   | ListAccounts
-                   | InitBudgetDir
+data BudgetCommand = BudgetBalance BudgetName
+                   | NewBudget BudgetName
+                   | BudgetStatus BudgetName
 
-data AccountCommand = AddAccount Name Amount
-                    | RemoveAccount Name
-                    | MergeAccounts Name Name
-                    | AccountStatus Name
-                    | NewAccountEntry Name Entry
-                    | ShowEntries Name
-                    | SortTrans FilePath
+makeLenses ''MainProg
+
+makeLenses ''MainOpts

@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 {-|
 Module      : Data.MongoDB
@@ -18,17 +20,19 @@ module Data.MongoDB
 import           Database.MongoDB
 import           Data.Budget
 import           Control.Monad
-import qualified Data.Text        as DT
+import           Data.Tree
+import           Data.Tree.Lens
+import           Control.Lens
+import qualified Data.Text              as DT
+import qualified Data.Bson              as DB
+import           Control.Monad.IO.Class
 
 instance Val Budget where
     val b = Doc $
-        [ "name" =: (budgetName bd)
-        , "amount" =: (budgetAmount bd)
-        , "subBudgets" =: subBudgets
+        [ "name" =: (b ^. root . budgetName)
+        , "amount" =: (b ^. root . budgetAmount)
+        , "subBudgets" =: (b ^. branches)
         ]
-      where
-        bd = rootLabel b
-        subBudgets = subForest b
     cast' (Doc d) = do
         name <- DB.lookup "name" d
         amount <- DB.lookup "amount" d
@@ -38,24 +42,26 @@ instance Val Budget where
     cast' _ = Nothing
 
 -- | Run a mongo action in our database
-runMongoCmd :: (MonadIO m) => Action m a -> m a
+runMongoCmd :: (MonadIO m) => Database -> Action m a -> m a
 runMongoCmd db act = do
-    pipe <- connect $ host "127.0.0.1"
+    pipe <- liftIO . connect $ host "127.0.0.1"
     d <- access pipe master db act
-    close pipe
+    liftIO $ close pipe
     return d
 
 -- | Fetch a budget with the given name from the database 
+pullBudget :: (MonadIO m) => Database -> BudgetName -> m (Maybe Budget)
 pullBudget db = runMongoCmd db . getBudget
 
 -- | Save a budget to the server. 
+pushBudget :: (MonadIO m) => Database -> Budget -> m ()
 pushBudget db = runMongoCmd db . putBudget
 
 -- | MongoDB action to get a budget from the "budgets" collection.
 getBudget :: (MonadIO m) => BudgetName -> Action m (Maybe Budget)
-getBudget bName = liftM (>>= at $ DT.pack bName) . findOne $
+getBudget bName = liftM (>>= DB.at (DT.pack bName)) . findOne $
     select [ "name" =: bName ] "budgets"
 
 -- | MongoDB action to write a budget to the "budgets" collection.
 putBudget :: (MonadIO m) => Budget -> Action m ()
-putBudget = save "budgets" . (\Doc d -> d) . val
+putBudget = save "budgets" . (\(Doc d) -> d) . val
