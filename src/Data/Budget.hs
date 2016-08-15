@@ -19,6 +19,7 @@ module Data.Budget
     , BudgetData(..)
     , Entry(..)
     , BudgetName(..)
+    , BudgetIndex(..)
     , checkBudgetBalanced
     , budgetBalance
     , addBudget
@@ -29,6 +30,9 @@ module Data.Budget
     , entryDesc
     , entryAmount
     , budgetTag
+    , treeNode
+    , budgetIncome
+    , budgetExpenses
     ) where
 
 import           Data.Amount
@@ -69,6 +73,7 @@ data Entry = Entry {
 
 makeLenses ''Entry
 
+budgetIncome :: Lens' Budget Amount
 budgetIncome = root . budgetAmount
 
 -- | Checks if a budget is balanced (its income is equal to its spending)
@@ -90,6 +95,9 @@ addBudgetData = addBudget . flip Node []
 
 addBudget :: Budget -> BudgetIndex -> Budget -> Budget
 addBudget new ind old = old & treeNode ind . branches %~ (new :)
+
+budgetExpenses :: Budget -> Amount
+budgetExpenses b = sum $ b ^.. branches . each . budgetIncome
 
 treeNode :: (Index (Tree a)) -> Traversal' (Tree a) (Tree a)
 treeNode [] = id
