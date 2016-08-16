@@ -12,9 +12,13 @@ Stability   :
 Portability : POSIX
 
 -}
-module Data.MongoDB
+module Yab.MongoDB
     ( pushBudget
     , pullBudget
+    , runMongoCmd
+    , budgetsCollection
+    , entriesCollection
+    , deleteBudget
     ) where
 
 import           Database.MongoDB
@@ -41,6 +45,14 @@ instance Val Budget where
             Node { rootLabel = BudgetData name amount, subForest = subBudgets }
     cast' _ = Nothing
 
+-- | The name of the collection to use for storing the budgets
+budgetsCollection = "budgets"
+
+-- | The name of the collection to use for storing entries for a budget
+entriesCollection = "entries"
+
+budgetNameSel bName = select ["name" =: bName] budgetsCollection
+
 -- | Run a mongo action in our database
 runMongoCmd :: (MonadIO m) => Database -> Action m a -> m a
 runMongoCmd db act = do
@@ -57,11 +69,17 @@ pullBudget db = runMongoCmd db . getBudget
 pushBudget :: (MonadIO m) => Database -> Budget -> m ()
 pushBudget db = runMongoCmd db . putBudget
 
--- | MongoDB action to get a budget from the "budgets" collection.
-getBudget :: (MonadIO m) => BudgetName -> Action m (Maybe Budget)
-getBudget bName = liftM (>>= DB.at (DT.pack bName)) . findOne $
-    select [ "name" =: bName ] "budgets"
+-- | Remove the first budget with the given name in the database
+deleteBudget :: (MonadIO m) => Database -> BudgetName -> m ()
+deleteBudget db = runMongoCmd db . deleteOne . budgetNameSel
 
--- | MongoDB action to write a budget to the "budgets" collection.
+-- | MongoDB action to get a budget from the budgetsCollection collection.
+getBudget :: (MonadIO m) => BudgetName -> Action m (Maybe Budget)
+getBudget = fmap (>>= DB.cast' . Doc) . (findOne . budgetNameSel) 
+
+-- | MongoDB action to write a budget to the budgetsCollection collection.
 putBudget :: (MonadIO m) => Budget -> Action m ()
-putBudget = save "budgets" . (\(Doc d) -> d) . val
+putBudget b = upsert (budgetNameSel $ b ^. root . budgetName) (toDoc b)
+
+toDoc :: (Val a) => a -> Document
+toDoc = (\(Doc d) -> d) . val

@@ -28,8 +28,8 @@ library
     ,lens
   exposed-modules:     
     Data.Budget
-    ,Data.MongoDB
     ,Data.Amount
+    ,Yab.MongoDB
 
 executable yab
   hs-source-dirs:      app
@@ -68,6 +68,7 @@ test-suite yab-test
     ,lens
     ,bytestring
     ,vector
+    ,mongoDB
 
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -O
   default-language:    Haskell2010

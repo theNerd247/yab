@@ -15,7 +15,7 @@ Portability : POSIX
 module Main where
 
 import           Data.Budget
-import           Data.MongoDB
+import           Yab.MongoDB
 import           Database.MongoDB               ( Database )
 import           Types
 import           Parser
